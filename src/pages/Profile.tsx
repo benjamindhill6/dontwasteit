@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { callFn, supabase } from '../lib/supabase'
 import type { Org, Person } from '../lib/types'
@@ -32,6 +33,7 @@ export default function Profile() {
       </form>
       {org && <OrgForm org={org} onSaved={refresh} />}
       {org && <Contacts orgId={org.id} meId={me!.id} />}
+      <Link className="btn secondary" to="/set-password">Change my password</Link>
       <button className="btn secondary" onClick={signOut}>Sign out</button>
     </Page>
   )
