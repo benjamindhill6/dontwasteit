@@ -42,3 +42,14 @@ export async function getCaller(req: Request): Promise<Caller | Response> {
   }
   return { admin, id: p.id, org_id: p.org_id, is_platform_admin: p.is_platform_admin, org_type };
 }
+
+/** Wraps a handler so any crash comes back as JSON with CORS headers (the browser otherwise just says "failed to fetch"). */
+export const handle = (fn: (req: Request) => Promise<Response>) => async (req: Request) => {
+  if (req.method === "OPTIONS") return preflight(req);
+  try {
+    return await fn(req);
+  } catch (e) {
+    console.error(e);
+    return json({ error: `Server error: ${(e as Error).message}` }, 500);
+  }
+};

@@ -1,19 +1,40 @@
 // Create or update an organization. Geocodes the address once on save (OpenStreetMap Nominatim, free).
 // Platform admins can do everything; a pantry contact can edit only their own pantry's profile.
-import { getCaller, json, preflight } from "../_shared/auth.ts";
+import { getCaller, handle, json } from "../_shared/auth.ts";
 
-async function geocode(street: string, city: string, state: string, zip: string) {
+type Geo = { lat: number; lng: number };
+
+// US Census geocoder first (free, no key, built for US street addresses)...
+async function census(street: string, city: string, state: string, zip: string): Promise<Geo | null> {
+  const q = new URLSearchParams({ street, city, state, zip, benchmark: "Public_AR_Current", format: "json" });
+  const r = await fetch(`https://geocoding.geo.census.gov/geocoder/locations/address?${q}`);
+  const m = (await r.json())?.result?.addressMatches?.[0];
+  return m ? { lat: m.coordinates.y, lng: m.coordinates.x } : null;
+}
+
+// ...then OpenStreetMap as a fallback.
+async function nominatim(street: string, city: string, state: string, zip: string): Promise<Geo | null> {
   const q = new URLSearchParams({ street, city, state, postalcode: zip, country: "us", format: "json", limit: "1" });
   const r = await fetch(`https://nominatim.openstreetmap.org/search?${q}`, {
     headers: { "User-Agent": "dont-waste-it-pantry-network/1.0" },
   });
   const rows = await r.json();
-  if (!rows.length) return null;
-  return { lat: parseFloat(rows[0].lat), lng: parseFloat(rows[0].lon) };
+  return rows.length ? { lat: parseFloat(rows[0].lat), lng: parseFloat(rows[0].lon) } : null;
 }
 
-Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return preflight(req);
+async function geocode(street: string, city: string, state: string, zip: string): Promise<Geo | null> {
+  for (const f of [census, nominatim]) {
+    try {
+      const g = await f(street, city, state, zip);
+      if (g) return g;
+    } catch (e) {
+      console.error("geocoder failed", e);
+    }
+  }
+  return null;
+}
+
+Deno.serve(handle(async (req) => {
   const caller = await getCaller(req);
   if (caller instanceof Response) return caller;
 
@@ -56,4 +77,4 @@ Deno.serve(async (req) => {
   const { data, error } = await q;
   if (error) return json({ error: error.message }, 400);
   return json({ organization: data });
-});
+}));
