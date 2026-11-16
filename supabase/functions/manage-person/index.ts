@@ -1,8 +1,8 @@
 // Invite or deactivate a contact. Admins manage anyone; a pantry/business contact manages their own org's contacts.
-import { cors, getCaller, json } from "../_shared/auth.ts";
+import { getCaller, json, preflight } from "../_shared/auth.ts";
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") return preflight(req);
   const caller = await getCaller(req);
   if (caller instanceof Response) return caller;
   const b = await req.json();

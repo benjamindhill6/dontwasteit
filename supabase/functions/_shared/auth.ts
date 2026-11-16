@@ -1,9 +1,20 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2";
 
+// Allow whatever headers the browser's preflight asks for (supabase-js adds several of its own).
 export const cors = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
+
+export const preflight = (req: Request) =>
+  new Response(null, {
+    status: 204,
+    headers: {
+      ...cors,
+      "Access-Control-Allow-Headers": req.headers.get("Access-Control-Request-Headers") ?? "*",
+    },
+  });
 
 export const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...cors, "Content-Type": "application/json" } });

@@ -1,6 +1,6 @@
 // Create or update an organization. Geocodes the address once on save (OpenStreetMap Nominatim, free).
 // Platform admins can do everything; a pantry contact can edit only their own pantry's profile.
-import { cors, getCaller, json } from "../_shared/auth.ts";
+import { getCaller, json, preflight } from "../_shared/auth.ts";
 
 async function geocode(street: string, city: string, state: string, zip: string) {
   const q = new URLSearchParams({ street, city, state, postalcode: zip, country: "us", format: "json", limit: "1" });
@@ -13,7 +13,7 @@ async function geocode(street: string, city: string, state: string, zip: string)
 }
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response("ok", { headers: cors });
+  if (req.method === "OPTIONS") return preflight(req);
   const caller = await getCaller(req);
   if (caller instanceof Response) return caller;
 
