@@ -82,8 +82,8 @@ export default function NewPost() {
           require_all: requireAll,
           photos: paths,
           source,
-          pickup: pickup ? { start: fromLocalInput(pw.start), end: fromLocalInput(pw.end) } : null,
-          delivery: delivery ? { start: fromLocalInput(dw.start), end: fromLocalInput(dw.end) } : null,
+          pickup: pickup ? { start: fromLocalInput(pw.start), end: fromLocalInput(pw.end) } : undefined,
+          delivery: delivery ? { start: fromLocalInput(dw.start), end: fromLocalInput(dw.end) } : undefined,
         },
       })
       if (error) throw error
