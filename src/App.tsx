@@ -28,7 +28,9 @@ export default function App() {
     return (
       <Routes>
         <Route path="/set-password" element={<SetPassword />} />
-        <Route path="*" element={<Login />} />
+        <Route path="/" element={<Login />} />
+        {/* Always sign in from "/" so a fresh login lands on the default page (Offers), not a stale deep link. */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     )
   }
