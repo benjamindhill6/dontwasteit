@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import type { Org, Person } from './lib/types'
@@ -20,20 +20,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [me, setMe] = useState<Person | null>(null)
   const [org, setOrg] = useState<Org | null>(null)
   const [loading, setLoading] = useState(true)
+  const loadedFor = useRef<string | null>(null) // user whose profile + org have finished loading
 
   const load = useCallback(async (s: Session | null) => {
     if (!s) {
+      loadedFor.current = null
       setMe(null)
       setOrg(null)
       setLoading(false)
       return
     }
     const { data: p } = await supabase.from('people').select('*').eq('id', s.user.id).maybeSingle()
-    setMe((p as Person) ?? null)
+    // Fetch the org before publishing either, so the app never sees a person without their org
+    // (that gap made the default redirect pick the wrong landing page).
+    let o: Org | null = null
     if (p?.org_id) {
-      const { data: o } = await supabase.from('organizations').select('*').eq('id', p.org_id).single()
-      setOrg((o as Org) ?? null)
-    } else setOrg(null)
+      const res = await supabase.from('organizations').select('*').eq('id', p.org_id).single()
+      o = (res.data as Org) ?? null
+    }
+    setMe((p as Person) ?? null)
+    setOrg(o)
+    loadedFor.current = s.user.id
     setLoading(false)
   }, [])
 
@@ -44,6 +51,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
       setSession(s)
+      // A different user just signed in: hold the loading screen until their profile is ready.
+      if (s && loadedFor.current !== s.user.id) setLoading(true)
       // Defer to avoid deadlocking inside the auth callback.
       setTimeout(() => load(s), 0)
     })
