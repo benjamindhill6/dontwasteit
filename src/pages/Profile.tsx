@@ -101,7 +101,11 @@ export function OrgForm({ org, onSaved, admin }: { org: Partial<Org>; onSaved: (
 
 export function Contacts({ orgId, meId }: { orgId: string; meId: string }) {
   const [people, setPeople] = useState<Person[]>([])
+  const { me } = useAuth()
+  const isAdmin = !!me?.is_platform_admin
   const [f, setF] = useState({ name: '', email: '', phone: '' })
+  const [direct, setDirect] = useState(false)
+  const [password, setPassword] = useState('')
   const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
@@ -115,9 +119,15 @@ export function Contacts({ orgId, meId }: { orgId: string; meId: string }) {
     e.preventDefault()
     setErr(null); setMsg(null)
     try {
-      await callFn('manage-person', { action: 'invite', org_id: orgId, ...f, redirect_to: `${window.location.origin}/set-password` })
-      setMsg(`Invite sent to ${f.email}.`)
+      if (direct) {
+        await callFn('manage-person', { action: 'create', org_id: orgId, ...f, password })
+        setMsg(`Account created for ${f.email}. Give them the password you chose; they can change it under Profile.`)
+      } else {
+        await callFn('manage-person', { action: 'invite', org_id: orgId, ...f, redirect_to: `${window.location.origin}/set-password` })
+        setMsg(`Invite sent to ${f.email}.`)
+      }
       setF({ name: '', email: '', phone: '' })
+      setPassword('')
       load()
     } catch (x) { setErr((x as Error).message) }
   }
@@ -137,14 +147,34 @@ export function Contacts({ orgId, meId }: { orgId: string; meId: string }) {
         </div>
       ))}
       <form className="stack" onSubmit={invite}>
-        <h3>Invite a contact</h3>
+        <h3>{direct ? 'Create an account' : 'Invite a contact'}</h3>
+        {isAdmin && (
+          <div className="seg">
+            <button type="button" className={!direct ? 'on' : ''} onClick={() => setDirect(false)}>Email an invite</button>
+            <button type="button" className={direct ? 'on' : ''} onClick={() => setDirect(true)}>Create it for them</button>
+          </div>
+        )}
         <label>Name<input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
         <label>Email<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
         <label>Phone<input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
+        {direct && (
+          <label>Password for them (at least 8 characters)
+            <div className="row">
+              <input type="text" required minLength={8} autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+              <button type="button" className="btn secondary" onClick={() => setPassword(makePassword())}>Generate</button>
+            </div>
+          </label>
+        )}
         {msg && <p className="ok">{msg}</p>}
         {err && <p className="error" role="alert">{err}</p>}
-        <button className="btn secondary">Send invite</button>
+        <button className="btn secondary">{direct ? 'Create account' : 'Send invite'}</button>
       </form>
     </div>
   )
+}
+
+function makePassword() {
+  const chars = 'abcdefghijkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+  const buf = crypto.getRandomValues(new Uint32Array(12))
+  return Array.from(buf, (n) => chars[n % chars.length]).join('')
 }

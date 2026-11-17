@@ -26,6 +26,28 @@ Deno.serve(handle(async (req) => {
     return json({ ok: true });
   }
 
+  // Platform admin creates the account directly, with a password they hand over. No email is sent.
+  if (b.action === "create") {
+    if (!caller.is_platform_admin) return json({ error: "Only platform admins can create accounts" }, 403);
+    if (!b.org_id) return json({ error: "Choose an organization" }, 400);
+    const email = String(b.email ?? "").trim().toLowerCase();
+    const password = String(b.password ?? "");
+    if (!email || !b.name || !String(b.name).trim()) return json({ error: "Name and email are required" }, 400);
+    if (password.length < 8) return json({ error: "Password must be at least 8 characters" }, 400);
+
+    const { data: created, error } = await admin.auth.admin.createUser({ email, password, email_confirm: true });
+    if (error || !created.user) return json({ error: error?.message ?? "Could not create account" }, 400);
+
+    const { error: pe } = await admin.from("people").upsert({
+      id: created.user.id, org_id: b.org_id, email, name: String(b.name).trim(), phone: b.phone ?? null, active: true,
+    });
+    if (pe) {
+      await admin.auth.admin.deleteUser(created.user.id); // don't leave a login with no profile
+      return json({ error: pe.message }, 400);
+    }
+    return json({ ok: true });
+  }
+
   if (b.action === "deactivate" || b.action === "reactivate") {
     const { data: target } = await admin.from("people").select("id, org_id, is_platform_admin").eq("id", b.person_id).single();
     if (!target || !target.org_id || !allowedOrg(target.org_id)) return json({ error: "Not allowed" }, 403);
