@@ -3,12 +3,12 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { supabase } from '../lib/supabase'
 import { CATEGORIES } from '../lib/types'
-import { compressImage, fromLocalInput, toLocalInput } from '../lib/format'
+import { compressImage, fromLocalInput } from '../lib/format'
+import { WindowPicker, defaultWindow } from '../components/TimePickers'
 import { Note, Page } from '../components/Common'
 
 type Line = { name: string; category: string; quantity: string; unit: string; best_by: string }
 const blank = (): Line => ({ name: '', category: 'produce', quantity: '1', unit: 'boxes', best_by: '' })
-const inTwo = (h: number) => toLocalInput(new Date(Date.now() + h * 3600_000))
 
 const STEPS = ['Items', 'Photos', 'Handoff', 'Source', 'Review']
 
@@ -21,8 +21,8 @@ export default function NewPost() {
   const [files, setFiles] = useState<{ blob: Blob; url: string }[]>([])
   const [pickup, setPickup] = useState(true)
   const [delivery, setDelivery] = useState(false)
-  const [pw, setPw] = useState({ start: inTwo(2), end: inTwo(26) })
-  const [dw, setDw] = useState({ start: inTwo(2), end: inTwo(26) })
+  const [pw, setPw] = useState(defaultWindow)
+  const [dw, setDw] = useState(defaultWindow)
   const [source, setSource] = useState<'none' | 'philabundance' | 'share'>('none')
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -147,11 +147,11 @@ export default function NewPost() {
       {step === 2 && (
         <div className="stack">
           <label className="check big-check"><input type="checkbox" checked={pickup} onChange={(e) => setPickup(e.target.checked)} /> 🚗 Pickup at our location</label>
-          {pickup && <WindowFields w={pw} set={setPw} />}
+          {pickup && <WindowPicker value={pw} onChange={setPw} />}
           {canDeliver && (
             <label className="check big-check"><input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} /> 🚚 We can deliver (up to {org.delivery_miles} mi)</label>
           )}
-          {delivery && <WindowFields w={dw} set={setDw} />}
+          {delivery && <WindowPicker value={dw} onChange={setDw} />}
           {!canDeliver && <p className="note">Add a delivery distance to your profile if you can deliver.</p>}
           <Note />
         </div>
@@ -188,14 +188,5 @@ export default function NewPost() {
         {step < 4 ? <button className="btn" onClick={next}>Next</button> : <button className="btn" onClick={submit} disabled={busy}>{busy ? 'Posting…' : 'Post it'}</button>}
       </div>
     </Page>
-  )
-}
-
-function WindowFields({ w, set }: { w: { start: string; end: string }; set: (v: { start: string; end: string }) => void }) {
-  return (
-    <div className="panel">
-      <label>From<input type="datetime-local" value={w.start} onChange={(e) => set({ ...w, start: e.target.value })} /></label>
-      <label>Until<input type="datetime-local" value={w.end} onChange={(e) => set({ ...w, end: e.target.value })} /></label>
-    </div>
   )
 }

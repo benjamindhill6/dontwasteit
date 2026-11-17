@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import type { ClaimStatus, Person } from '../lib/types'
 import { fmtDateTime, fmtWindow, fromLocalInput, num, toLocalInput } from '../lib/format'
 import { Badge, Page, Sheet } from '../components/Common'
+import { SlotPicker } from '../components/TimePickers'
 
 type ClaimRow = {
   id: string
@@ -159,7 +160,7 @@ function ProposeSheet({ claim, onClose, onDone }: { claim: ClaimRow; onClose: ()
     <Sheet title="Propose a time" onClose={onClose}>
       <div className="stack">
         <p className="muted">Window: {fmtWindow(s, e)}</p>
-        <input type="datetime-local" value={t} min={s ? toLocalInput(new Date(s)) : undefined} max={e ? toLocalInput(new Date(e)) : undefined} onChange={(ev) => setT(ev.target.value)} />
+        <SlotPicker min={s} max={e} value={t} onChange={setT} />
         {err && <p className="error">{err}</p>}
         <button className="btn big" onClick={go}>Send</button>
       </div>

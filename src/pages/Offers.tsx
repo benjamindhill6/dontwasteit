@@ -3,6 +3,7 @@ import { supabase, photoUrl } from '../lib/supabase'
 import { catIcon, catLabel, type FeedCard } from '../lib/types'
 import { fmtDate, fmtWindow, fromLocalInput, num, toLocalInput } from '../lib/format'
 import { Badge, Note, Page, Sheet } from '../components/Common'
+import { SlotPicker } from '../components/TimePickers'
 
 export default function Offers() {
   const [cards, setCards] = useState<FeedCard[] | null>(null)
@@ -132,9 +133,8 @@ function ClaimSheet({ card, onClose, onDone }: { card: FeedCard; onClose: () => 
           </div>
         )}
         <p className="muted">Window: {fmtWindow(ws, we)}</p>
-        <label>Propose a time
-          <input type="datetime-local" value={time} min={ws ? toLocalInput(new Date(ws)) : undefined} max={we ? toLocalInput(new Date(we)) : undefined} onChange={(e) => setTime(e.target.value)} />
-        </label>
+        <p className="lbl">Propose a time</p>
+        <SlotPicker min={ws} max={we} value={time} onChange={setTime} />
         <p className="note">The poster confirms your time. You'll find it under Activity.</p>
         {err && <p className="error" role="alert">{err}</p>}
         <button className="btn big" disabled={busy} onClick={submit}>Send claim</button>
