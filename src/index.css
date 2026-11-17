@@ -76,3 +76,8 @@ label.check input { width: 28px; height: 28px; min-height: 0; flex: none; }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { font: inherit; font-size: .95rem; font-weight: 600; min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .chip.on { border-color: var(--green); background: color-mix(in srgb, var(--green) 16%, var(--surface)); }
+
+.splash { position: fixed; inset: 0; z-index: 1000; background: #fbfdf7; display: flex; opacity: 1; transition: opacity .4s ease; }
+.splash.fade { opacity: 0; pointer-events: none; }
+.splash img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
+@media (prefers-reduced-motion: reduce) { .splash { transition: none; } }
