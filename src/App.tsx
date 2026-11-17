@@ -1,4 +1,5 @@
-import { NavLink, Navigate, Route, Routes } from 'react-router-dom'
+import { useEffect } from 'react'
+import { NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from './auth'
 import { configured } from './lib/supabase'
 import Login from './pages/Login'
@@ -8,6 +9,22 @@ import NewPost from './pages/NewPost'
 import Activity from './pages/Activity'
 import Profile from './pages/Profile'
 import Admin from './pages/Admin'
+
+// True once this app launch has been sent to its default page. A page reload (or reopening the
+// installed app) starts a new launch, so the flag resets and we redirect again.
+let launchHandled = false
+
+/** On each launch, jump to the default page even if the app reopened on a stale URL such as /profile. */
+function LaunchRedirect({ to }: { to: string }) {
+  const { pathname } = useLocation()
+  const nav = useNavigate()
+  useEffect(() => {
+    if (launchHandled) return
+    launchHandled = true
+    if (pathname !== to && pathname !== '/set-password') nav(to, { replace: true })
+  }, [pathname, to, nav])
+  return null
+}
 
 const Logo = () => <span className="logo" aria-hidden>📦</span>
 
@@ -48,9 +65,11 @@ export default function App() {
   const isAdmin = me.is_platform_admin
   const isPantry = org?.type === 'pantry'
   const canPost = Boolean(org)
+  const landing = isPantry ? '/offers' : isAdmin ? '/admin' : '/post'
 
   return (
     <div className="shell">
+      <LaunchRedirect to={landing} />
       <main className="main">
         <Routes>
           <Route path="/set-password" element={<SetPassword />} />
@@ -59,7 +78,7 @@ export default function App() {
           {canPost && <Route path="/activity" element={<Activity />} />}
           <Route path="/profile" element={<Profile />} />
           {isAdmin && <Route path="/admin" element={<Admin />} />}
-          <Route path="*" element={<Navigate to={isPantry ? '/offers' : isAdmin ? '/admin' : '/post'} replace />} />
+          <Route path="*" element={<Navigate to={landing} replace />} />
         </Routes>
       </main>
       <nav className="tabbar" aria-label="Main">
