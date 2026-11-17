@@ -9,6 +9,8 @@ import NewPost from './pages/NewPost'
 import Activity from './pages/Activity'
 import Profile from './pages/Profile'
 import Admin from './pages/Admin'
+import Alerts, { MyAlertLimits, PantryAlertRules } from './pages/Alerts'
+import { syncPush } from './lib/push'
 
 // True once this app launch has been sent to its default page. A page reload (or reopening the
 // installed app) starts a new launch, so the flag resets and we redirect again.
@@ -16,13 +18,15 @@ let launchHandled = false
 
 /** On each launch, jump to the default page even if the app reopened on a stale URL such as /profile. */
 function LaunchRedirect({ to }: { to: string }) {
-  const { pathname } = useLocation()
+  const { pathname, search } = useLocation()
   const nav = useNavigate()
   useEffect(() => {
     if (launchHandled) return
     launchHandled = true
+    // Tapping an alert opens the page it points to, so leave those alone.
+    if (new URLSearchParams(search).get('from') === 'alert') return
     if (pathname !== to && pathname !== '/set-password') nav(to, { replace: true })
-  }, [pathname, to, nav])
+  }, [pathname, search, to, nav])
   return null
 }
 
@@ -30,6 +34,8 @@ const Logo = () => <span className="logo" aria-hidden>📦</span>
 
 export default function App() {
   const { session, me, org, loading } = useAuth()
+  // Keep this phone's alerts pointed at whoever is signed in.
+  useEffect(() => { if (me?.active) syncPush() }, [me?.id, me?.active])
 
   if (!configured) {
     return (
@@ -77,6 +83,9 @@ export default function App() {
           {canPost && <Route path="/post" element={<NewPost />} />}
           {canPost && <Route path="/activity" element={<Activity />} />}
           <Route path="/profile" element={<Profile />} />
+          <Route path="/profile/alerts" element={<Alerts />} />
+          {isPantry && <Route path="/profile/alerts/mine" element={<MyAlertLimits />} />}
+          {isPantry && <Route path="/profile/alerts/pantry" element={<PantryAlertRules />} />}
           {isAdmin && <Route path="/admin" element={<Admin />} />}
           <Route path="*" element={<Navigate to={landing} replace />} />
         </Routes>

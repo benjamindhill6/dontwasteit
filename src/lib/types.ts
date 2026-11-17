@@ -11,6 +11,17 @@ export type Org = {
   is_philabundance: boolean
   is_share: boolean
   active: boolean
+  notif_rules?: AlertRules
+}
+
+/** Alert filters. The same shape is used for pantry rules and personal limits; both must pass. */
+export type AlertRules = {
+  enabled?: boolean
+  categories?: string[]   // absent = all
+  days?: number[]         // 0 = Sunday; absent = every day
+  handoff?: 'any' | 'delivery' | 'pickup'
+  start_hour?: number     // with end_hour: only alert from start to end (Eastern time)
+  end_hour?: number
 }
 
 export type Person = {
@@ -21,6 +32,7 @@ export type Person = {
   phone: string | null
   is_platform_admin: boolean
   active: boolean
+  notif_prefs?: AlertRules
 }
 
 export const CATEGORIES = [

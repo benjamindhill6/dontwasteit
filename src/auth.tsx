@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState, type ReactNode } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
+import { forgetPushDevice } from './lib/push'
 import type { Org, Person } from './lib/types'
 
 type Ctx = {
@@ -66,6 +67,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     loading,
     refresh: () => load(session),
     signOut: async () => {
+      await forgetPushDevice()
       await supabase.auth.signOut()
     },
   }
