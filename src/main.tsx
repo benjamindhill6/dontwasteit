@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.tsx'
 import { AuthProvider } from './auth.tsx'
+import Splash from './components/Splash.tsx'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
@@ -12,5 +13,6 @@ createRoot(document.getElementById('root')!).render(
         <App />
       </AuthProvider>
     </BrowserRouter>
+    <Splash />
   </StrictMode>,
 )
