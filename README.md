@@ -2,6 +2,8 @@
 
 Invite-only web app where food pantries share surplus food. React + TypeScript (Vite, installable PWA) on Supabase, hosted on Cloudflare Pages. See the Phase 1 spec for the full product.
 
+Live site: https://dontwasteit.pages.dev/
+
 ## What's built (build steps 1-3)
 
 - Invite-only accounts, platform admin console, organizations with geocoded addresses and distance settings
