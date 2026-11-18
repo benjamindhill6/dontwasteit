@@ -5,6 +5,7 @@ import { callFn, supabase } from '../lib/supabase'
 import type { Org, Person } from '../lib/types'
 import { Note, Page } from '../components/Common'
 import { PRIVACY, TERMS } from '../legal/documents'
+import { MyAlertsSection, PantryAlertsSection } from './Alerts'
 
 export default function Profile() {
   const { me, org, refresh, signOut } = useAuth()
@@ -23,7 +24,6 @@ export default function Profile() {
 
   return (
     <Page title="Profile">
-      <Link className="btn big" to="/profile/alerts">🔔 Alerts</Link>
       <form className="stack panel" onSubmit={saveMe}>
         <h2>You</h2>
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} required /></label>
@@ -33,7 +33,9 @@ export default function Profile() {
         {err && <p className="error">{err}</p>}
         <button className="btn">Save</button>
       </form>
+      <MyAlertsSection />
       {org && <OrgForm org={org} onSaved={refresh} />}
+      <PantryAlertsSection />
       {org && <Contacts orgId={org.id} meId={me!.id} />}
       <Link className="btn secondary" to={TERMS.path}>📄 User Agreement</Link>
       <Link className="btn secondary" to={PRIVACY.path}>🔒 Privacy Policy</Link>

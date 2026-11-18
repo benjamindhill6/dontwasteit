@@ -91,3 +91,6 @@ label.check input { width: 28px; height: 28px; min-height: 0; flex: none; }
 .legal h2 { margin-top: 1.5rem; }
 .legal ul { padding-left: 1.3rem; } .legal li { margin-bottom: .6rem; }
 .legal-title { font-size: 1.35rem; margin-top: 1rem; }
+.summary { margin: 0; display: flex; flex-direction: column; gap: 6px; }
+.summary div { display: flex; justify-content: space-between; gap: 12px; font-size: 1.05rem; }
+.summary dt { color: var(--muted); } .summary dd { margin: 0; font-weight: 600; text-align: right; }

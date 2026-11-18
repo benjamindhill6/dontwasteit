@@ -12,7 +12,7 @@ const ALL_DAYS = [0, 1, 2, 3, 4, 5, 6]
 const hourLabel = (h: number) => (h === 0 || h === 24 ? '12 AM' : h === 12 ? '12 PM' : h < 12 ? `${h} AM` : `${h - 12} PM`)
 const ALWAYS_ON = 'You always get alerts about your own posts and claims: a claim, a time proposed, accepted or declined, a post you claimed changing or being cancelled, or a claim released.'
 
-const Back = () => <Link className="btn link" to="/profile/alerts">‹ Alerts</Link>
+const Back = () => <Link className="btn link" to="/profile">‹ Profile</Link>
 
 /** Alerts home: turn alerts on for this phone, then pick which settings to change. */
 export default function Alerts() {
@@ -73,11 +73,7 @@ export default function Alerts() {
         {err && <p className="error" role="alert">{err}</p>}
       </div>
 
-      {pantry && <>
-        <Link className="btn big secondary" to="/profile/alerts/mine">My alert limits</Link>
-        <Link className="btn big secondary" to="/profile/alerts/pantry">Pantry alert rules</Link>
-        <p className="note">The pantry rules apply to everyone at {org!.name}. Your limits can narrow them for you, never widen them.</p>
-      </>}
+      {pantry && <p className="note">Which new food you hear about is set on your Profile, under My alerts and Pantry alerts.</p>}
       <p className="note">{ALWAYS_ON}</p>
     </Page>
   )
@@ -161,11 +157,11 @@ export function PantryAlertRules() {
     setBusy(false)
     if (error) { setErr(error.message); return }
     await refresh()
-    nav('/profile/alerts', { replace: true })
+    nav('/profile', { replace: true })
   }
 
   return (
-    <Page title="Pantry alert rules" action={<Back />}>
+    <Page title="Pantry alerts" action={<Back />}>
       <form className="stack" onSubmit={save}>
         <p className="note">These apply to everyone at {org.name}.</p>
         <div className="stack panel">
@@ -222,12 +218,12 @@ export function MyAlertLimits() {
     setBusy(false)
     if (error) { setErr(error.message); return }
     await refresh()
-    nav('/profile/alerts', { replace: true })
+    nav('/profile', { replace: true })
   }
 
   if (!pantryOn) {
     return (
-      <Page title="My alert limits" action={<Back />}>
+      <Page title="My alerts" action={<Back />}>
         <div className="stack panel">
           <p className="big-text">New food alerts are off for your whole pantry.</p>
           <p>Any contact can turn them back on under Pantry alert rules.</p>
@@ -237,7 +233,7 @@ export function MyAlertLimits() {
   }
 
   return (
-    <Page title="My alert limits" action={<Back />}>
+    <Page title="My alerts" action={<Back />}>
       <form className="stack" onSubmit={save}>
         <p className="note">Just for you, on top of the pantry rules.</p>
         <div className="stack panel">
@@ -293,5 +289,90 @@ export function MyAlertLimits() {
         <p className="note">{ALWAYS_ON}</p>
       </form>
     </Page>
+  )
+}
+
+// ---------------------------------------------------------------- Profile sections
+
+const dayList = (d: number[] | undefined) => (!d ? 'Every day' : d.length ? [...d].sort().map((x) => DAYS[x]).join(', ') : 'No days')
+const catList = (c: string[] | undefined) => (!c ? 'All food types' : c.length ? c.map(catName).join(', ') : 'No food types')
+const handoffText = (h: AlertRules['handoff']) => (h === 'delivery' ? 'Delivery only' : h === 'pickup' ? 'Pickup only' : 'Pickup or delivery')
+
+function Summary({ rows }: { rows: [string, string][] }) {
+  return (
+    <dl className="summary">
+      {rows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+    </dl>
+  )
+}
+
+/** Profile section: this person's alerts (phone on/off plus personal limits). */
+export function MyAlertsSection() {
+  const { me, org } = useAuth()
+  const [state, setState] = useState<PushState | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [err, setErr] = useState<string | null>(null)
+  useEffect(() => { pushState().then(setState) }, [])
+  const pantry = org?.type === 'pantry'
+  const r = me?.notif_prefs ?? {}
+  const base = org?.notif_rules ?? {}
+
+  async function on() {
+    setBusy(true); setErr(null)
+    try { setState(await turnOnPush()) } catch (x) { setErr((x as Error).message) }
+    setBusy(false)
+  }
+
+  const phone = {
+    on: 'On for this phone',
+    off: 'Off on this phone',
+    denied: 'Blocked in your phone settings',
+    'ios-install': 'Add the app to your Home Screen first',
+    unsupported: "This browser can't get alerts",
+  }
+
+  return (
+    <div className="stack panel">
+      <h2>🔔 My alerts</h2>
+      <p className={'big-text' + (state === 'on' ? ' ok' : '')}>{state ? phone[state] : 'Checking…'}</p>
+      {state === 'off' && <button className="btn" disabled={busy} onClick={on}>{busy ? 'Turning on…' : 'Turn on alerts'}</button>}
+      {err && <p className="error" role="alert">{err}</p>}
+      {pantry && (
+        (base.enabled ?? true)
+          ? (r.enabled ?? true)
+            ? <Summary rows={[
+                ['Time of day', r.start_hour != null && r.end_hour != null ? `${hourLabel(r.start_hour)} to ${hourLabel(r.end_hour)}` : 'Any time'],
+                ['Food types', r.categories ? catList(r.categories) : 'Same as the pantry'],
+                ['Days', r.days ? dayList(r.days) : 'Same as the pantry'],
+                ['How', r.handoff && r.handoff !== 'any' ? handoffText(r.handoff) : 'Same as the pantry'],
+              ]} />
+            : <p>New food alerts are off for you.</p>
+          : <p>New food alerts are off for your whole pantry.</p>
+      )}
+      {pantry && <Link className="btn secondary" to="/profile/alerts/mine">Change my alerts</Link>}
+      <Link className="btn link" to="/profile/alerts">Phone setup and test alert</Link>
+      <p className="note">{pantry ? 'Your settings only narrow the pantry alerts below, never widen them. ' : ''}{ALWAYS_ON}</p>
+    </div>
+  )
+}
+
+/** Profile section: the pantry's base alert rules, shared by every contact. */
+export function PantryAlertsSection() {
+  const { org } = useAuth()
+  if (!org || org.type !== 'pantry') return null
+  const r = org.notif_rules ?? {}
+  const providers = [org.is_philabundance && 'Philabundance', org.is_share && 'SHARE'].filter(Boolean).join(' and ')
+  return (
+    <div className="stack panel">
+      <h2>🔔 Pantry alerts</h2>
+      <p className="note">For everyone at {org.name}.</p>
+      {(r.enabled ?? true)
+        ? <Summary rows={[['Food types', catList(r.categories)], ['Days', dayList(r.days)], ['How', handoffText(r.handoff)]]} />
+        : <p className="big-text">New food alerts are off for the whole pantry.</p>}
+      <p className="note">{providers
+        ? `As a ${providers} client, you hear about ${providers} food during its first 2 hours, before other pantries.`
+        : 'Philabundance and SHARE food reaches you after its first 2 hours, when it opens to every pantry.'}</p>
+      <Link className="btn secondary" to="/profile/alerts/pantry">Change pantry alerts</Link>
+    </div>
   )
 }
