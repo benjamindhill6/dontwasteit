@@ -11,6 +11,8 @@ import Profile from './pages/Profile'
 import Admin from './pages/Admin'
 import Alerts, { MyAlertLimits, PantryAlertRules } from './pages/Alerts'
 import { syncPush } from './lib/push'
+import { AgreeScreen, LegalPage } from './pages/Legal'
+import { PRIVACY, TERMS } from './legal/documents'
 
 // True once this app launch has been sent to its default page. A page reload (or reopening the
 // installed app) starts a new launch, so the flag resets and we redirect again.
@@ -33,7 +35,7 @@ function LaunchRedirect({ to }: { to: string }) {
 const Logo = () => <span className="logo" aria-hidden>📦</span>
 
 export default function App() {
-  const { session, me, org, loading } = useAuth()
+  const { session, me, org, loading, agreed } = useAuth()
   // Keep this phone's alerts pointed at whoever is signed in.
   useEffect(() => { if (me?.active) syncPush() }, [me?.id, me?.active])
 
@@ -68,6 +70,16 @@ export default function App() {
     )
   }
 
+  if (!agreed) {
+    return (
+      <Routes>
+        {/* A new invitee sets their password first, then agrees. */}
+        <Route path="/set-password" element={<SetPassword />} />
+        <Route path="*" element={<AgreeScreen />} />
+      </Routes>
+    )
+  }
+
   const isAdmin = me.is_platform_admin
   const isPantry = org?.type === 'pantry'
   const canPost = Boolean(org)
@@ -84,6 +96,8 @@ export default function App() {
           {canPost && <Route path="/activity" element={<Activity />} />}
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/alerts" element={<Alerts />} />
+          <Route path={TERMS.path} element={<LegalPage doc={TERMS} />} />
+          <Route path={PRIVACY.path} element={<LegalPage doc={PRIVACY} />} />
           {isPantry && <Route path="/profile/alerts/mine" element={<MyAlertLimits />} />}
           {isPantry && <Route path="/profile/alerts/pantry" element={<PantryAlertRules />} />}
           {isAdmin && <Route path="/admin" element={<Admin />} />}
