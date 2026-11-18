@@ -3,12 +3,15 @@ import type { Session } from '@supabase/supabase-js'
 import { supabase } from './lib/supabase'
 import { forgetPushDevice } from './lib/push'
 import type { Org, Person } from './lib/types'
+import { PRIVACY, TERMS } from './legal/documents'
 
 type Ctx = {
   session: Session | null
   me: Person | null
   org: Org | null
   loading: boolean
+  /** True once this person has agreed to the current User Agreement and Privacy Policy. */
+  agreed: boolean
   refresh: () => Promise<void>
   signOut: () => Promise<void>
 }
@@ -20,6 +23,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null)
   const [me, setMe] = useState<Person | null>(null)
   const [org, setOrg] = useState<Org | null>(null)
+  const [agreed, setAgreed] = useState(false)
   const [loading, setLoading] = useState(true)
   const loadedFor = useRef<string | null>(null) // user whose profile + org have finished loading
 
@@ -28,6 +32,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       loadedFor.current = null
       setMe(null)
       setOrg(null)
+      setAgreed(false)
       setLoading(false)
       return
     }
@@ -39,8 +44,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const res = await supabase.from('organizations').select('*').eq('id', p.org_id).single()
       o = (res.data as Org) ?? null
     }
+    // Has this person agreed to the current version of both documents?
+    let ok = false
+    if (p?.active) {
+      const { data: rows } = await supabase.from('agreements').select('document, version').eq('person_id', s.user.id)
+      const has = (d: { id: string; version: string }) => (rows ?? []).some((r) => r.document === d.id && r.version === d.version)
+      ok = has(TERMS) && has(PRIVACY)
+    }
     setMe((p as Person) ?? null)
     setOrg(o)
+    setAgreed(ok)
     loadedFor.current = s.user.id
     setLoading(false)
   }, [])
@@ -65,6 +78,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     me,
     org,
     loading,
+    agreed,
     refresh: () => load(session),
     signOut: async () => {
       await forgetPushDevice()

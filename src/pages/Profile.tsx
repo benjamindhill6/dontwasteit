@@ -4,6 +4,7 @@ import { useAuth } from '../auth'
 import { callFn, supabase } from '../lib/supabase'
 import type { Org, Person } from '../lib/types'
 import { Note, Page } from '../components/Common'
+import { PRIVACY, TERMS } from '../legal/documents'
 
 export default function Profile() {
   const { me, org, refresh, signOut } = useAuth()
@@ -34,6 +35,8 @@ export default function Profile() {
       </form>
       {org && <OrgForm org={org} onSaved={refresh} />}
       {org && <Contacts orgId={org.id} meId={me!.id} />}
+      <Link className="btn secondary" to={TERMS.path}>📄 User Agreement</Link>
+      <Link className="btn secondary" to={PRIVACY.path}>🔒 Privacy Policy</Link>
       <Link className="btn secondary" to="/set-password">Change my password</Link>
       <button className="btn secondary" onClick={signOut}>Sign out</button>
     </Page>

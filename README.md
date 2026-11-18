@@ -11,6 +11,7 @@ Live site: https://dontwasteit.pages.dev/
 - Swipe-through offers with distance rules and the Philabundance/SHARE 2-hour window
 - Claims: whole/partial, propose and confirm a time, release, complete, one-tap Text
 - Push alerts: web push with pantry rules plus personal limits (overlap of both), distance rule, provider window release, always-on claim alerts. Profile > Alerts.
+- User Agreement and Privacy Policy: everyone agrees on first use (checkbox), and again whenever a document's `version` changes in `src/legal/documents.ts`. Acceptances are stored per person, per document version, with a server timestamp in `agreements`. Both documents are under Profile.
 - All permissions live in Postgres (RLS + security-definer functions) in `supabase/migrations`
 
 Not yet: needs posts, serving schedules and calendar, admin reports, post editing (cancel works), photo purge function (queue is filled by `photo_purge_queue`).
