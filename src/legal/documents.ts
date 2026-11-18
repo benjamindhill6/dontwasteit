@@ -33,12 +33,12 @@ export const TERMS: LegalDoc = {
   title: "Don't Waste It! User Agreement",
   short: 'User Agreement',
   path: '/profile/terms',
-  version: '2026-11-17',
-  date: 'November 17, 2026',
+  version: '2026-11-18',
+  date: 'November 18, 2026',
   blocks: [
     h('The short version'),
     p('This agreement is between you and Braxton Executive Services LLC ("we" or "us") and covers your use of Don\'t Waste It! (the "app"). By accepting an invitation, signing in or using the app, you agree to it. If you are using the app for a pantry or business, you confirm you have the authority to do that on its behalf.'),
-    p('The app is free. It helps pantries, restaurants and stores share surplus food. It does not move, inspect or guarantee any food, and we are not responsible for what happens in an exchange or for problems with the app itself. Please enter only names, email addresses and phone numbers, and only for the purpose of sharing food.'),
+    p('The app is free. It helps pantries, restaurants and stores share surplus food. It does not move, inspect or guarantee any food. We take no responsibility for the quality or safety of any food shared through the app. That is up to the organizations offering and receiving it. We are also not responsible for what happens in an exchange or for problems with the app itself. Please enter only names, email addresses and phone numbers, and only for the purpose of sharing food.'),
     p('Our Privacy Policy is part of this agreement. If the two ever conflict, this agreement controls.'),
 
     h('What the app is and who can use it'),
@@ -68,6 +68,7 @@ export const TERMS: LegalDoc = {
     p('We do not promise that any post will be claimed, that any food will be available, or that any other user will show up or behave well.'),
 
     h('Food safety and the law'),
+    p(' We take no responsibility for the quality or safety of any food transferred through the app. The organization offering food, whether a pantry, restaurant or store, is responsible for making sure it is safe and fit to give away. The pantry receiving it is responsible for checking it and deciding whether it is safe to accept, store and hand out. Each side has to satisfy itself. Neither can rely on us or on the app to do it.', 'We are not responsible for the food.'),
     p('You are responsible for the safety of any food you post, claim, move or give away. That includes storage, temperature control, labeling, allergen information, recalls and handling during transport. We do not inspect, test or verify any food, and a photo or description in the app is not a guarantee of quality or safety.'),
     p('Do not post food that is spoiled, recalled, past its safe date or otherwise unsafe, and do not claim food you cannot handle safely. Follow all laws and rules that apply to you, including food safety and health department rules, any licenses you hold, and your agreements with food providers such as Philabundance or SHARE.'),
     p('Federal and state food donation laws may protect people and organizations that donate food in good faith. Nothing in this agreement limits those protections. We make no promise about whether they apply to you.'),
