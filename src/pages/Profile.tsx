@@ -37,10 +37,12 @@ export default function Profile() {
       {org && <OrgForm org={org} onSaved={refresh} />}
       <PantryAlertsSection />
       {org && <Contacts orgId={org.id} meId={me!.id} />}
-      <Link className="btn secondary" to={TERMS.path}>📄 User Agreement</Link>
-      <Link className="btn secondary" to={PRIVACY.path}>🔒 Privacy Policy</Link>
       <Link className="btn secondary" to="/set-password">Change my password</Link>
       <button className="btn secondary" onClick={signOut}>Sign out</button>
+      <nav className="legal-links" aria-label="Legal">
+        <Link to={TERMS.path}>User Agreement</Link>
+        <Link to={PRIVACY.path}>Privacy Policy</Link>
+      </nav>
     </Page>
   )
 }
