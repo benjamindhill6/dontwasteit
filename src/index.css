@@ -95,3 +95,5 @@ label.check input { width: 28px; height: 28px; min-height: 0; flex: none; }
 .summary div { display: flex; justify-content: space-between; gap: 12px; font-size: 1.05rem; }
 .summary dt { color: var(--muted); } .summary dd { margin: 0; font-weight: 600; text-align: right; }
 .legal-links { display: flex; justify-content: center; gap: 24px; margin-top: 20px; font-size: .95rem; } .legal-links a { display: inline-flex; align-items: center; min-height: 44px; padding: 0 4px; }
+.update-banner { position: fixed; top: 0; left: 0; right: 0; z-index: 900; display: flex; flex-direction: column; align-items: center; gap: 2px; width: 100%; border: none; border-bottom: 2px solid var(--green-ink); background: var(--green); color: var(--green-ink); font: inherit; font-size: 1.1rem; padding: calc(14px + env(safe-area-inset-top)) 16px 14px; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.update-banner strong { font-size: 1.2rem; }

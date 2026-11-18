@@ -29,7 +29,7 @@ Not yet: needs posts, serving schedules and calendar, admin reports, post editin
 4. **Cloudflare Pages**: connect this GitHub repo. Build command `npm run build`, output `dist`. Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (Supabase > Project Settings > API).
 5. **First admin**: in Supabase Auth > Users, invite benjamindhill6@gmail.com. A database trigger makes that account the platform admin automatically. Then add the first pantry in the app's Admin tab and invite ridleyparkfoodpantry@gmail.com as its contact.
 
-Deploys: every push to `main` redeploys the site. Migrations and functions are applied with the Supabase CLI above.
+Deploys: every push to `main` redeploys the site. Installed copies pick up a new deploy on their own: the app checks for a new version when it opens, when it comes back to the foreground, and every 30 minutes. If nobody has touched the app yet it reloads by itself, otherwise it shows an "Update available" banner. See `src/lib/appUpdate.ts` and `public/_headers`. Migrations and functions are applied with the Supabase CLI above.
 
 ## Develop
 

@@ -1,0 +1,19 @@
+# Files that must always be checked with the server, so a new deploy is seen right away.
+/
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/sw.js
+  Cache-Control: no-cache
+/push-sw.js
+  Cache-Control: no-cache
+/workbox-*
+  Cache-Control: no-cache
+/manifest.webmanifest
+  Cache-Control: no-cache
+/version.json
+  Cache-Control: no-store
+
+# Built files have a content hash in their name, so they never change and can be kept forever.
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
