@@ -8,6 +8,8 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'splash.jpg', 'icons/apple-touch-icon.png'],
+      // Push alert handlers live in public/push-sw.js and are pulled into the generated worker.
+      workbox: { importScripts: ['/push-sw.js'] },
       manifest: {
         name: "Don't Waste It!",
         short_name: "Don't Waste It",

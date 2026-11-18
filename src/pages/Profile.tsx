@@ -22,6 +22,7 @@ export default function Profile() {
 
   return (
     <Page title="Profile">
+      <Link className="btn big" to="/profile/alerts">🔔 Alerts</Link>
       <form className="stack panel" onSubmit={saveMe}>
         <h2>You</h2>
         <label>Name<input value={name} onChange={(e) => setName(e.target.value)} required /></label>

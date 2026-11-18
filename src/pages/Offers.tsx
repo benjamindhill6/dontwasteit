@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { supabase, photoUrl } from '../lib/supabase'
 import { catIcon, catLabel, type FeedCard } from '../lib/types'
 import { fmtDate, fmtWindow, fromLocalInput, num, toLocalInput } from '../lib/format'
@@ -11,11 +12,20 @@ export default function Offers() {
   const [claiming, setClaiming] = useState<FeedCard | null>(null)
   const [openItem, setOpenItem] = useState<string | null>(null)
   const startX = useRef<number | null>(null)
+  const [params, setParams] = useSearchParams()
+  const wanted = params.get('post')   // set when someone taps a new-food alert
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc('browse_feed')
-    if (!error) setCards(data as FeedCard[])
-  }, [])
+    if (error) return
+    const list = data as FeedCard[]
+    if (wanted) {
+      const at = list.findIndex((x) => x.id === wanted)
+      if (at >= 0) setI(at)
+      setParams({}, { replace: true })
+    }
+    setCards(list)
+  }, [wanted, setParams])
   useEffect(() => { load() }, [load])
 
   if (!cards) return <Page title="Offers"><p>Loading…</p></Page>
