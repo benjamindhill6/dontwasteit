@@ -22,23 +22,32 @@ export default function Profile() {
     else { setMsg('Saved.'); refresh() }
   }
 
+  const orgKind = org?.type === 'pantry' ? 'pantry' : 'business'
+  const personal = <>
+    <form className="stack panel" onSubmit={saveMe}>
+      <h2>Your info</h2>
+      <label>Name<input value={name} onChange={(e) => setName(e.target.value)} required /></label>
+      <label>Phone (others can text you)<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
+      <p className="muted">{me?.email}</p>
+      {msg && <p className="ok">{msg}</p>}
+      {err && <p className="error">{err}</p>}
+      <button className="btn">Save</button>
+    </form>
+    <MyAlertsSection />
+    <Link className="btn secondary" to="/set-password">Change my password</Link>
+  </>
+
   return (
     <Page title="Profile">
-      <form className="stack panel" onSubmit={saveMe}>
-        <h2>You</h2>
-        <label>Name<input value={name} onChange={(e) => setName(e.target.value)} required /></label>
-        <label>Phone (others can text you)<input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} /></label>
-        <p className="muted">{me?.email}</p>
-        {msg && <p className="ok">{msg}</p>}
-        {err && <p className="error">{err}</p>}
-        <button className="btn">Save</button>
-      </form>
-      <MyAlertsSection />
-      {org && <OrgForm org={org} onSaved={refresh} />}
-      <PantryAlertsSection />
-      {org && <Contacts orgId={org.id} meId={me!.id} />}
-      <Link className="btn secondary" to="/set-password">Change my password</Link>
-      <button className="btn secondary" onClick={signOut}>Sign out</button>
+      {org ? <>
+        <Section title="Your personal profile">{personal}</Section>
+        <Section title={`Your ${orgKind} profile`}>
+          <OrgForm org={org} onSaved={refresh} title={`${orgKind === 'pantry' ? 'Pantry' : 'Business'} info`} />
+          <PantryAlertsSection />
+          <Contacts orgId={org.id} meId={me!.id} />
+        </Section>
+      </> : <div className="stack">{personal}</div>}
+      <button className="btn secondary sign-out" onClick={signOut}>Sign out</button>
       <nav className="legal-links" aria-label="Legal">
         <Link to={TERMS.path}>User Agreement</Link>
         <Link to={PRIVACY.path}>Privacy Policy</Link>
@@ -47,7 +56,17 @@ export default function Profile() {
   )
 }
 
-export function OrgForm({ org, onSaved, admin }: { org: Partial<Org>; onSaved: () => void; admin?: boolean }) {
+/** A collapsible Profile section. Starts closed on each visit. */
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
+  return (
+    <details className="section">
+      <summary>{title}</summary>
+      <div className="stack section-body">{children}</div>
+    </details>
+  )
+}
+
+export function OrgForm({ org, onSaved, admin, title }: { org: Partial<Org>; onSaved: () => void; admin?: boolean; title?: string }) {
   const [f, setF] = useState({
     name: org.name ?? '', street: org.street ?? '', city: org.city ?? '', state: org.state ?? 'PA', zip: org.zip ?? '',
     type: org.type ?? 'pantry',
@@ -73,7 +92,7 @@ export function OrgForm({ org, onSaved, admin }: { org: Partial<Org>; onSaved: (
 
   return (
     <form className="stack panel" onSubmit={save}>
-      <h2>{org.id ? (pantry ? 'Pantry profile' : 'Business profile') : 'New organization'}</h2>
+      <h2>{title ?? (org.id ? (pantry ? 'Pantry profile' : 'Business profile') : 'New organization')}</h2>
       {admin && !org.id && (
         <div className="seg">
           <button type="button" className={pantry ? 'on' : ''} onClick={() => setF({ ...f, type: 'pantry' })}>Pantry</button>
