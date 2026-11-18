@@ -37,7 +37,7 @@ export const TERMS: LegalDoc = {
   date: 'November 17, 2026',
   blocks: [
     h('The short version'),
-    p('This agreement is between you and [operator name or organization] ("we" or "us") and covers your use of Don\'t Waste It! (the "app"). By accepting an invitation, signing in or using the app, you agree to it. If you are using the app for a pantry or business, you confirm you have the authority to do that on its behalf.'),
+    p('This agreement is between you and Braxton Executive Services LLC ("we" or "us") and covers your use of Don\'t Waste It! (the "app"). By accepting an invitation, signing in or using the app, you agree to it. If you are using the app for a pantry or business, you confirm you have the authority to do that on its behalf.'),
     p('The app is free. It helps pantries, restaurants and stores share surplus food. It does not move, inspect or guarantee any food, and we are not responsible for what happens in an exchange or for problems with the app itself. Please enter only names, email addresses and phone numbers, and only for the purpose of sharing food.'),
     p('Our Privacy Policy is part of this agreement. If the two ever conflict, this agreement controls.'),
 
@@ -107,7 +107,7 @@ export const TERMS: LegalDoc = {
     h('Legal terms and contact'),
     p('This agreement is governed by Pennsylvania law. Any dispute will be handled in the state or federal courts that serve Delaware County, Pennsylvania, and you agree to those courts.'),
     p('We may update this agreement. We will change the date at the top and tell users in the app before a material change takes effect. Using the app afterward means you accept the update. If any part of this agreement is found unenforceable, the rest still applies. This agreement and the Privacy Policy are the whole agreement between you and us about the app.'),
-    p('Questions: [contact email].'),
+    p('Questions: benjamindhill6@gmail.com.'),
   ],
 }
 
@@ -120,7 +120,7 @@ export const PRIVACY: LegalDoc = {
   date: 'November 17, 2026',
   blocks: [
     h('The short version'),
-    p('Don\'t Waste It! is a free, invite-only web app where food pantries, restaurants and stores share surplus food. This policy explains what information the app holds and what we do with it. The app is operated by [operator name or organization] ("we" or "us").'),
+    p('Don\'t Waste It! is a free, invite-only web app where food pantries, restaurants and stores share surplus food. This policy explains what information the app holds and what we do with it. The app is operated by Braxton Executive Services LLC ("we" or "us").'),
     p('We collect only what the app needs to move food between organizations: your name, email address and phone number, plus basic details about your pantry or business and the food you post. We never sell your information. We do not share it with anyone outside the app, other than the technology providers that run the app for us, which are listed below.'),
     p('Please do not put anything else personal into the app. The app is not built to protect sensitive information, so it should never hold any.'),
 
@@ -209,7 +209,7 @@ export const PRIVACY: LegalDoc = {
     h('Children, changes and contact'),
     p('The app is for adults 18 and older. It is not meant for children, and we do not knowingly collect information from them. If we learn that we have, we will delete it.'),
     p('If we change this policy, we will update the date at the top and tell users in the app before any material change takes effect. Using the app after that means you accept the change.'),
-    p('Questions or requests about your information: [contact email].'),
+    p('Questions or requests about your information: benjamindhill6@gmail.com.'),
   ],
 }
 
