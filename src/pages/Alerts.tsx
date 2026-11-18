@@ -214,7 +214,8 @@ export function MyAlertLimits() {
   async function save(e: React.FormEvent) {
     e.preventDefault()
     setBusy(true); setErr(null)
-    const { error } = await supabase.rpc('update_my_notif_prefs', { p_prefs: r })
+    // How the pantry gets food is a pantry setting only, so drop any old personal value.
+    const { error } = await supabase.rpc('update_my_notif_prefs', { p_prefs: { ...r, handoff: undefined } })
     setBusy(false)
     if (error) { setErr(error.message); return }
     await refresh()
@@ -278,12 +279,6 @@ export function MyAlertLimits() {
                 onChange={(v) => set({ days: v })} />
             </div>
           )}
-          {(base.handoff ?? 'any') === 'any' && (
-            <div className="stack panel">
-              <h2>How you get food</h2>
-              <Handoff value={r.handoff} options={['any', 'delivery', 'pickup']} onChange={(v) => set({ handoff: v })} />
-            </div>
-          )}
         </>}
         <SaveBar busy={busy} msg={null} err={err} disabled={(myCats?.length === 0) || (myDays?.length === 0)} />
         <p className="note">{ALWAYS_ON}</p>
@@ -344,7 +339,6 @@ export function MyAlertsSection() {
                 ['Time of day', r.start_hour != null && r.end_hour != null ? `${hourLabel(r.start_hour)} to ${hourLabel(r.end_hour)}` : 'Any time'],
                 ['Food types', r.categories ? catList(r.categories) : 'Same as the pantry'],
                 ['Days', r.days ? dayList(r.days) : 'Same as the pantry'],
-                ['How', r.handoff && r.handoff !== 'any' ? handoffText(r.handoff) : 'Same as the pantry'],
               ]} />
             : <p>New food alerts are off for you.</p>
           : <p>New food alerts are off for your whole pantry.</p>

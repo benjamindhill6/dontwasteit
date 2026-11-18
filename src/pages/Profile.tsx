@@ -22,6 +22,7 @@ export default function Profile() {
     else { setMsg('Saved.'); refresh() }
   }
 
+  const [contactsVersion, setContactsVersion] = useState(0)
   const orgKind = org?.type === 'pantry' ? 'pantry' : 'business'
   const personal = <>
     <form className="stack panel" onSubmit={saveMe}>
@@ -44,7 +45,12 @@ export default function Profile() {
         <Section title={`Your ${orgKind} profile`}>
           <OrgForm org={org} onSaved={refresh} title={`${orgKind === 'pantry' ? 'Pantry' : 'Business'} info`} />
           <PantryAlertsSection />
-          <Contacts orgId={org.id} meId={me!.id} />
+          <ContactList orgId={org.id} meId={me!.id} version={contactsVersion} />
+        </Section>
+        {/* Every contact sees this for now. If a per-pantry admin role is added, show it only
+            to that role and platform admins. */}
+        <Section title="Add a new contact">
+          <AddContact orgId={org.id} onAdded={() => setContactsVersion((v) => v + 1)} />
         </Section>
       </> : <div className="stack">{personal}</div>}
       <button className="btn secondary sign-out" onClick={signOut}>Sign out</button>
@@ -126,38 +132,26 @@ export function OrgForm({ org, onSaved, admin, title }: { org: Partial<Org>; onS
   )
 }
 
+/** Contact list plus the add form, together (used on the Admin page). */
 export function Contacts({ orgId, meId }: { orgId: string; meId: string }) {
+  const [version, setVersion] = useState(0)
+  return <>
+    <ContactList orgId={orgId} meId={meId} version={version} />
+    <AddContact orgId={orgId} onAdded={() => setVersion((v) => v + 1)} />
+  </>
+}
+
+/** Everyone at the organization, with deactivate and reactivate. Reloads when `version` changes. */
+export function ContactList({ orgId, meId, version }: { orgId: string; meId: string; version?: number }) {
   const [people, setPeople] = useState<Person[]>([])
-  const { me } = useAuth()
-  const isAdmin = !!me?.is_platform_admin
-  const [f, setF] = useState({ name: '', email: '', phone: '' })
-  const [direct, setDirect] = useState(false)
-  const [password, setPassword] = useState('')
-  const [msg, setMsg] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
 
   const load = async () => {
     const { data } = await supabase.from('people').select('*').eq('org_id', orgId).order('name')
     setPeople((data as Person[]) ?? [])
   }
-  useEffect(() => { load() }, [orgId])
+  useEffect(() => { load() }, [orgId, version])
 
-  async function invite(e: React.FormEvent) {
-    e.preventDefault()
-    setErr(null); setMsg(null)
-    try {
-      if (direct) {
-        await callFn('manage-person', { action: 'create', org_id: orgId, ...f, password })
-        setMsg(`Account created for ${f.email}. Give them the password you chose; they can change it under Profile.`)
-      } else {
-        await callFn('manage-person', { action: 'invite', org_id: orgId, ...f, redirect_to: `${window.location.origin}/set-password` })
-        setMsg(`Invite sent to ${f.email}.`)
-      }
-      setF({ name: '', email: '', phone: '' })
-      setPassword('')
-      load()
-    } catch (x) { setErr((x as Error).message) }
-  }
   async function toggle(p: Person) {
     setErr(null)
     try { await callFn('manage-person', { action: p.active ? 'deactivate' : 'reactivate', person_id: p.id }); load() }
@@ -173,30 +167,62 @@ export function Contacts({ orgId, meId }: { orgId: string; meId: string }) {
           {p.id !== meId && <button className="btn link" onClick={() => toggle(p)}>{p.active ? 'Deactivate' : 'Reactivate'}</button>}
         </div>
       ))}
-      <form className="stack" onSubmit={invite}>
-        <h3>{direct ? 'Create an account' : 'Invite a contact'}</h3>
-        {isAdmin && (
-          <div className="seg">
-            <button type="button" className={!direct ? 'on' : ''} onClick={() => setDirect(false)}>Email an invite</button>
-            <button type="button" className={direct ? 'on' : ''} onClick={() => setDirect(true)}>Create it for them</button>
-          </div>
-        )}
-        <label>Name<input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
-        <label>Email<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
-        <label>Phone<input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
-        {direct && (
-          <label>Password for them (at least 8 characters)
-            <div className="row">
-              <input type="text" required minLength={8} autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
-              <button type="button" className="btn secondary" onClick={() => setPassword(makePassword())}>Generate</button>
-            </div>
-          </label>
-        )}
-        {msg && <p className="ok">{msg}</p>}
-        {err && <p className="error" role="alert">{err}</p>}
-        <button className="btn secondary">{direct ? 'Create account' : 'Send invite'}</button>
-      </form>
+      {err && <p className="error" role="alert">{err}</p>}
     </div>
+  )
+}
+
+/** Invite a new contact by email, or (platform admins) create the account directly. */
+export function AddContact({ orgId, onAdded }: { orgId: string; onAdded?: () => void }) {
+  const { me } = useAuth()
+  const isAdmin = !!me?.is_platform_admin
+  const [f, setF] = useState({ name: '', email: '', phone: '' })
+  const [direct, setDirect] = useState(false)
+  const [password, setPassword] = useState('')
+  const [msg, setMsg] = useState<string | null>(null)
+  const [err, setErr] = useState<string | null>(null)
+
+  async function invite(e: React.FormEvent) {
+    e.preventDefault()
+    setErr(null); setMsg(null)
+    try {
+      if (direct) {
+        await callFn('manage-person', { action: 'create', org_id: orgId, ...f, password })
+        setMsg(`Account created for ${f.email}. Give them the password you chose; they can change it under Profile.`)
+      } else {
+        await callFn('manage-person', { action: 'invite', org_id: orgId, ...f, redirect_to: `${window.location.origin}/set-password` })
+        setMsg(`Invite sent to ${f.email}.`)
+      }
+      setF({ name: '', email: '', phone: '' })
+      setPassword('')
+      onAdded?.()
+    } catch (x) { setErr((x as Error).message) }
+  }
+
+  return (
+    <form className="stack panel" onSubmit={invite}>
+      <h2>{direct ? 'Create an account' : 'Invite a contact'}</h2>
+      {isAdmin && (
+        <div className="seg">
+          <button type="button" className={!direct ? 'on' : ''} onClick={() => setDirect(false)}>Email an invite</button>
+          <button type="button" className={direct ? 'on' : ''} onClick={() => setDirect(true)}>Create it for them</button>
+        </div>
+      )}
+      <label>Name<input required value={f.name} onChange={(e) => setF({ ...f, name: e.target.value })} /></label>
+      <label>Email<input type="email" required value={f.email} onChange={(e) => setF({ ...f, email: e.target.value })} /></label>
+      <label>Phone<input type="tel" value={f.phone} onChange={(e) => setF({ ...f, phone: e.target.value })} /></label>
+      {direct && (
+        <label>Password for them (at least 8 characters)
+          <div className="row">
+            <input type="text" required minLength={8} autoComplete="off" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="button" className="btn secondary" onClick={() => setPassword(makePassword())}>Generate</button>
+          </div>
+        </label>
+      )}
+      {msg && <p className="ok">{msg}</p>}
+      {err && <p className="error" role="alert">{err}</p>}
+      <button className="btn secondary">{direct ? 'Create account' : 'Send invite'}</button>
+    </form>
   )
 }
 
