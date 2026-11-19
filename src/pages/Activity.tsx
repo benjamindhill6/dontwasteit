@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth'
 import { supabase } from '../lib/supabase'
-import type { ClaimStatus, Person, TimeWindow } from '../lib/types'
+import { Link } from 'react-router-dom'
+import { CLAIM_STATUS, type ClaimStatus, type TimeWindow } from '../lib/types'
 import { fmtDateTime, fromLocalInput, num, toLocalInput, windowsFor, windowsPayload } from '../lib/format'
 import { Badge, Page, Section, Sheet } from '../components/Common'
+import { ContactSheet } from '../components/ContactSheet'
 import { SlotPicker, WindowSummary, WindowsPicker, defaultWindow, windowsError } from '../components/TimePickers'
 
 type ClaimRow = {
@@ -54,19 +56,11 @@ const historyCutoff = () => {
   return d.toISOString()
 }
 
-const STATUS: Record<ClaimStatus, [string, string]> = {
-  awaiting_time: ['Waiting for a new time', 'warn'],
-  time_proposed: ['Time proposed', 'info'],
-  scheduled: ['Time confirmed', 'good'],
-  completed: ['Complete', 'done'],
-  released: ['Released', 'done'],
-}
-
 export default function Activity() {
   const { org } = useAuth()
   const [claims, setClaims] = useState<ClaimRow[] | null>(null)
   const [posts, setPosts] = useState<PostRow[]>([])
-  const [contacts, setContacts] = useState<{ org: string; people: Person[] } | null>(null)
+  const [contact, setContact] = useState<{ id: string; name: string } | null>(null)
   const [proposing, setProposing] = useState<ClaimRow | null>(null)
   const [relisting, setRelisting] = useState<PostRow | null>(null)
   const [now, setNow] = useState(0)   // when the list was loaded
@@ -94,11 +88,6 @@ export default function Activity() {
     await load()
   }
 
-  async function showContacts(orgId: string, name: string) {
-    const { data } = await supabase.from('people').select('*').eq('org_id', orgId).eq('active', true)
-    setContacts({ org: name, people: (data as Person[]) ?? [] })
-  }
-
   if (!claims) return <Page title="Activity"><p>Loading…</p></Page>
   const open = claims.filter((c) => c.status !== 'completed' && c.status !== 'released')
   const closed = claims.filter((c) => c.status === 'completed' || c.status === 'released')
@@ -111,7 +100,7 @@ export default function Activity() {
     const mine = c.claimer_org_id === org!.id
     const other = mine ? c.post.org.name : c.claimer.name
     const otherId = mine ? c.post.org_id : c.claimer_org_id
-    const [label, tone] = STATUS[c.status]
+    const [label, tone] = CLAIM_STATUS[c.status]
     const isOpen = c.status !== 'completed' && c.status !== 'released'
     return (
       <div className="panel">
@@ -129,7 +118,7 @@ export default function Activity() {
             <button className="btn secondary" onClick={() => setProposing(c)}>{c.status === 'awaiting_time' ? 'Propose a new time' : 'Change time'}</button>
           )}
           {isOpen && <button className="btn" onClick={() => act('complete_claim', { p_claim: c.id })}>Mark complete</button>}
-          <button className="btn secondary" onClick={() => showContacts(otherId, other)}>Contact</button>
+          <button className="btn secondary" onClick={() => setContact({ id: otherId, name: other })}>Contact</button>
           {isOpen && <button className="btn danger" onClick={() => confirm('Release this claim and reopen the food?') && act('release_claim', { p_claim: c.id })}>Release</button>}
         </div>
       </div>
@@ -137,7 +126,7 @@ export default function Activity() {
   }
 
   return (
-    <Page title="My activity">
+    <Page title="My activity" action={<Link className="btn secondary head-link" to="/activity/transportation">🚚 Transportation</Link>}>
       <Section title={`Open exchanges (${open.length})`}>
         {open.length === 0 ? <p className="muted">Nothing open.</p> : open.map((c) => <Card key={c.id} c={c} />)}
       </Section>
@@ -184,20 +173,7 @@ export default function Activity() {
       {proposing && (
         <ProposeSheet claim={proposing} onClose={() => setProposing(null)} onDone={() => { setProposing(null); load() }} />
       )}
-      {contacts && (
-        <Sheet title={contacts.org} onClose={() => setContacts(null)}>
-          <div className="stack">
-            {contacts.people.length === 0 && <p>No contacts.</p>}
-            {contacts.people.map((p) => (
-              <div className="panel" key={p.id}>
-                <strong>{p.name}</strong>
-                {p.phone ? <p><a href={`tel:${p.phone}`}>{p.phone}</a></p> : <p className="muted">No phone</p>}
-                {p.phone && <a className="btn" href={`sms:${p.phone}`}>💬 Text</a>}
-              </div>
-            ))}
-          </div>
-        </Sheet>
-      )}
+      {contact && <ContactSheet orgId={contact.id} orgName={contact.name} onClose={() => setContact(null)} />}
     </Page>
   )
 }
