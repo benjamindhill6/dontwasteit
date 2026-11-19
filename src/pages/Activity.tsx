@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth'
 import { supabase } from '../lib/supabase'
-import type { ClaimStatus, Person } from '../lib/types'
-import { fmtDateTime, fmtWindow, fromLocalInput, num, toLocalInput } from '../lib/format'
+import type { ClaimStatus, Person, TimeWindow } from '../lib/types'
+import { fmtDateTime, fromLocalInput, num, toLocalInput, windowsFor, windowsPayload } from '../lib/format'
 import { Badge, Page, Sheet } from '../components/Common'
-import { SlotPicker, WindowPicker, defaultWindow } from '../components/TimePickers'
+import { SlotPicker, WindowSummary, WindowsPicker, defaultWindow, windowsError } from '../components/TimePickers'
 
 type ClaimRow = {
   id: string
@@ -18,8 +18,8 @@ type ClaimRow = {
     id: string
     org_id: string
     source: 'none' | 'philabundance' | 'share'
-    pickup_start: string | null; pickup_end: string | null
-    delivery_start: string | null; delivery_end: string | null
+    pickup_start: string | null; pickup_end: string | null; pickup_windows: TimeWindow[] | null
+    delivery_start: string | null; delivery_end: string | null; delivery_windows: TimeWindow[] | null
     org: { name: string }
   }
 }
@@ -67,7 +67,7 @@ export default function Activity() {
   const load = useCallback(async () => {
     const [c, p] = await Promise.all([
       supabase.from('claims')
-        .select('id,status,method,proposed_time,claimer_org_id,claimer:organizations!claimer_org_id(name),claim_items(quantity,line_items(name,unit)),post:posts(id,org_id,source,pickup_start,pickup_end,delivery_start,delivery_end,org:organizations(name))')
+        .select('id,status,method,proposed_time,claimer_org_id,claimer:organizations!claimer_org_id(name),claim_items(quantity,line_items(name,unit)),post:posts(id,org_id,source,pickup_start,pickup_end,pickup_windows,delivery_start,delivery_end,delivery_windows,org:organizations(name))')
         .order('created_at', { ascending: false }),
       supabase.from('posts').select('id,status,source,expires_at,pickup_offered,pickup_end,delivery_offered,delivery_end,line_items(name,quantity,unit,claim_items(quantity,claim:claims(status)))').eq('org_id', org!.id).order('created_at', { ascending: false }).limit(30),
     ])
@@ -190,9 +190,8 @@ export default function Activity() {
 }
 
 function ProposeSheet({ claim, onClose, onDone }: { claim: ClaimRow; onClose: () => void; onDone: () => void }) {
-  const s = claim.method === 'pickup' ? claim.post.pickup_start : claim.post.delivery_start
-  const e = claim.method === 'pickup' ? claim.post.pickup_end : claim.post.delivery_end
-  const [t, setT] = useState(toLocalInput(new Date(claim.proposed_time ?? s ?? Date.now())))
+  const windows = windowsFor(claim.post, claim.method, true)
+  const [t, setT] = useState(toLocalInput(new Date(claim.proposed_time ?? windows[0]?.start ?? Date.now())))
   const [err, setErr] = useState<string | null>(null)
   async function go() {
     const { error } = await supabase.rpc('propose_time', { p_claim: claim.id, p_time: fromLocalInput(t) })
@@ -202,8 +201,8 @@ function ProposeSheet({ claim, onClose, onDone }: { claim: ClaimRow; onClose: ()
   return (
     <Sheet title="Propose a time" onClose={onClose}>
       <div className="stack">
-        <p className="muted">Window: {fmtWindow(s, e)}</p>
-        <SlotPicker min={s} max={e} value={t} onChange={setT} />
+        <div className="muted"><WindowSummary icon={claim.method === 'pickup' ? '🚗' : '🚚'} label={claim.method === 'pickup' ? 'Pickup' : 'Delivery'} list={windows} /></div>
+        <SlotPicker windows={windows} value={t} onChange={setT} />
         {err && <p className="error">{err}</p>}
         <button className="btn big" onClick={go}>Send</button>
       </div>
@@ -216,22 +215,22 @@ function RelistSheet({ post, onClose, onDone }: { post: PostRow; onClose: () => 
   const canDeliver = org?.delivery_miles != null
   const [pickup, setPickup] = useState(post.pickup_offered || !canDeliver)
   const [delivery, setDelivery] = useState(post.delivery_offered && canDeliver)
-  const [pw, setPw] = useState(defaultWindow)
-  const [dw, setDw] = useState(defaultWindow)
+  const [pw, setPw] = useState<TimeWindow[]>(() => [defaultWindow()])
+  const [dw, setDw] = useState<TimeWindow[]>(() => [defaultWindow()])
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
   async function go() {
     if (!pickup && !delivery) return setErr('Offer pickup, delivery, or both.')
-    if (pickup && !(new Date(pw.end) > new Date(pw.start))) return setErr('Pickup end must be after the start.')
-    if (delivery && !(new Date(dw.end) > new Date(dw.start))) return setErr('Delivery end must be after the start.')
+    const bad = (pickup && windowsError(pw, 'pickup')) || (delivery && windowsError(dw, 'delivery'))
+    if (bad) return setErr(bad)
     setBusy(true)
     setErr(null)
     const { error } = await supabase.rpc('relist_post', {
       p_post: post.id,
       p_payload: {
-        pickup: pickup ? { start: fromLocalInput(pw.start), end: fromLocalInput(pw.end) } : undefined,
-        delivery: delivery ? { start: fromLocalInput(dw.start), end: fromLocalInput(dw.end) } : undefined,
+        pickup: pickup ? windowsPayload(pw) : undefined,
+        delivery: delivery ? windowsPayload(dw) : undefined,
       },
     })
     setBusy(false)
@@ -240,15 +239,15 @@ function RelistSheet({ post, onClose, onDone }: { post: PostRow; onClose: () => 
   }
 
   return (
-    <Sheet title="New claim window" onClose={onClose}>
+    <Sheet title="New claim windows" onClose={onClose}>
       <div className="stack">
         <p>What's left goes back in Offers for other pantries, and they get an alert the same way they do for a new post.</p>
         <label className="check big-check"><input type="checkbox" checked={pickup} onChange={(e) => setPickup(e.target.checked)} /> 🚗 Pickup at our location</label>
-        {pickup && <WindowPicker value={pw} onChange={setPw} />}
+        {pickup && <WindowsPicker what="pickup" value={pw} onChange={setPw} />}
         {canDeliver && (
           <label className="check big-check"><input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} /> 🚚 We can deliver (up to {org!.delivery_miles} mi)</label>
         )}
-        {delivery && <WindowPicker value={dw} onChange={setDw} />}
+        {delivery && <WindowsPicker what="delivery" value={dw} onChange={setDw} />}
         <p className="muted">Stays live for 7 more days.</p>
         {err && <p className="error" role="alert">{err}</p>}
         <button className="btn big" disabled={busy} onClick={go}>{busy ? 'Saving…' : 'Offer it again'}</button>

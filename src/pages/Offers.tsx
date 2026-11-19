@@ -2,9 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase, photoUrl } from '../lib/supabase'
 import { catIcon, catLabel, type FeedCard } from '../lib/types'
-import { fmtDate, fmtWindow, fromLocalInput, num, toLocalInput } from '../lib/format'
+import { fmtDate, fromLocalInput, num, toLocalInput, windowsFor } from '../lib/format'
 import { Badge, Note, Page, Sheet } from '../components/Common'
-import { SlotPicker } from '../components/TimePickers'
+import { SlotPicker, WindowSummary } from '../components/TimePickers'
 
 export default function Offers() {
   const [cards, setCards] = useState<FeedCard[] | null>(null)
@@ -79,8 +79,8 @@ export default function Offers() {
         </ul>
         {c.require_all && <p className="note">Must be taken all together.</p>}
         <div className="options">
-          {c.options.pickup && <p>🚗 <strong>Pickup</strong> {fmtWindow(c.pickup_start, c.pickup_end)}</p>}
-          {c.options.delivery && <p>🚚 <strong>Delivery</strong> {fmtWindow(c.delivery_start, c.delivery_end)}</p>}
+          {c.options.pickup && <WindowSummary icon="🚗" label="Pickup" list={windowsFor(c, 'pickup', true)} />}
+          {c.options.delivery && <WindowSummary icon="🚚" label="Delivery" list={windowsFor(c, 'delivery', true)} />}
           <Note />
         </div>
         <button className="btn big" onClick={() => setClaiming(c)}>Claim</button>
@@ -100,9 +100,8 @@ function ClaimSheet({ card, onClose, onDone }: { card: FeedCard; onClose: () => 
   const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(open.map((x) => [x.id, String(x.remaining)])))
   const [on, setOn] = useState<Record<string, boolean>>(() => Object.fromEntries(open.map((x) => [x.id, true])))
   const [method, setMethod] = useState<'pickup' | 'delivery'>(card.options.pickup ? 'pickup' : 'delivery')
-  const ws = method === 'pickup' ? card.pickup_start : card.delivery_start
-  const we = method === 'pickup' ? card.pickup_end : card.delivery_end
-  const [time, setTime] = useState(() => toLocalInput(new Date(ws ?? Date.now())))
+  const windows = windowsFor(card, method, true)
+  const [time, setTime] = useState(() => toLocalInput(new Date(windows[0]?.start ?? Date.now())))
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
 
@@ -142,9 +141,9 @@ function ClaimSheet({ card, onClose, onDone }: { card: FeedCard; onClose: () => 
             <button className={method === 'delivery' ? 'on' : ''} onClick={() => setMethod('delivery')}>🚚 Deliver to me</button>
           </div>
         )}
-        <p className="muted">Window: {fmtWindow(ws, we)}</p>
+        <div className="muted"><WindowSummary icon={method === 'pickup' ? '🚗' : '🚚'} label={method === 'pickup' ? 'Pickup' : 'Delivery'} list={windows} /></div>
         <p className="lbl">Propose a time</p>
-        <SlotPicker min={ws} max={we} value={time} onChange={setTime} />
+        <SlotPicker windows={windows} value={time} onChange={setTime} />
         <p className="note">The poster confirms your time. You'll find it under Activity.</p>
         {err && <p className="error" role="alert">{err}</p>}
         <button className="btn big" disabled={busy} onClick={submit}>Send claim</button>

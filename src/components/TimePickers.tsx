@@ -1,5 +1,6 @@
 import { useEffect, useMemo } from 'react'
-import { toLocalInput } from '../lib/format'
+import { fmtWindow, toLocalInput } from '../lib/format'
+import type { TimeWindow } from '../lib/types'
 
 // Day chips + short time dropdowns. All values are local "YYYY-MM-DDTHH:mm" strings,
 // the same format <input type="datetime-local"> used, so callers keep using fromLocalInput().
@@ -110,24 +111,84 @@ export function WindowPicker({ value, onChange }: { value: { start: string; end:
   )
 }
 
-/** Pick one time inside [min, max] (ISO strings). Used when proposing a pickup/delivery time. */
-export function SlotPicker({ min, max, value, onChange }: { min: string | null; max: string | null; value: string; onChange: (v: string) => void }) {
+/**
+ * A next window to suggest when "Add another window" is tapped: the same hours one day after the
+ * last window, while that day is still within the post's 7 days. Otherwise the usual default.
+ */
+function nextWindow(list: TimeWindow[]): TimeWindow {
+  const last = list[list.length - 1]
+  if (last) {
+    const s = new Date(last.start)
+    const e = new Date(last.end)
+    const day = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 1)
+    if (postingDays().some((d) => sameDay(d, day))) {
+      return { start: toLocalInput(at(day, minsOf(s))), end: toLocalInput(at(day, minsOf(e))) }
+    }
+  }
+  return defaultWindow()
+}
+
+/** One or more windows. One is the default; "Add another window" adds more (up to 10). */
+export function WindowsPicker({ value, onChange, what }: { value: TimeWindow[]; onChange: (v: TimeWindow[]) => void; what: 'pickup' | 'delivery' }) {
+  const set = (i: number, w: TimeWindow) => onChange(value.map((x, j) => (j === i ? w : x)))
+  return (
+    <div className="stack">
+      {value.map((w, i) => (
+        <div key={i} className="stack">
+          {value.length > 1 && (
+            <div className="row between">
+              <p className="lbl">{what === 'pickup' ? 'Pickup' : 'Delivery'} window {i + 1}</p>
+              <button type="button" className="btn link" onClick={() => onChange(value.filter((_, j) => j !== i))}>Remove</button>
+            </div>
+          )}
+          <WindowPicker value={w} onChange={(v) => set(i, v)} />
+        </div>
+      ))}
+      {value.length < 10 && (
+        <button type="button" className="btn secondary" onClick={() => onChange([...value, nextWindow(value)])}>
+          + Add another {what} window
+        </button>
+      )}
+    </div>
+  )
+}
+
+/** A problem with a list of windows from WindowsPicker, or null when they're fine. */
+export function windowsError(list: TimeWindow[], what: 'pickup' | 'delivery'): string | null {
+  const name = what === 'pickup' ? 'Pickup' : 'Delivery'
+  if (list.some((w) => !(new Date(w.end) > new Date(w.start)))) return `${name} end must be after the start.`
+  const sorted = [...list].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+  for (let i = 1; i < sorted.length; i++) {
+    if (new Date(sorted[i].start) < new Date(sorted[i - 1].end)) return `${name} windows can't overlap. Change or remove one.`
+  }
+  return null
+}
+
+/** Pick one time inside any of the windows (ISO strings). Used when proposing a pickup/delivery time. */
+export function SlotPicker({ windows, value, onChange }: { windows: TimeWindow[]; value: string; onChange: (v: string) => void }) {
+  const key = windows.map((w) => `${w.start}/${w.end}`).join(',')
   const slots = useMemo(() => {
-    const lo = Math.max(min ? new Date(min).getTime() : Date.now(), Date.now())
-    const hi = max ? new Date(max).getTime() : lo + DAYS * 86_400_000
+    const now = Date.now()
     const out: Date[] = []
-    if (lo <= hi) out.push(new Date(lo))
-    for (let t = Math.ceil(lo / (STEP * 60_000)) * STEP * 60_000; t < hi; t += STEP * 60_000) if (t > lo) out.push(new Date(t))
-    if (hi > lo) out.push(new Date(hi))
-    return out
-  }, [min, max])
+    for (const part of key ? key.split(',') : []) {
+      const [a, b] = part.split('/')
+      const lo = Math.max(new Date(a).getTime(), now)
+      const hi = new Date(b).getTime()
+      if (lo > hi) continue
+      out.push(new Date(lo))
+      for (let t = Math.ceil(lo / (STEP * 60_000)) * STEP * 60_000; t < hi; t += STEP * 60_000) if (t > lo) out.push(new Date(t))
+      if (hi > lo) out.push(new Date(hi))
+    }
+    out.sort((x, y) => x.getTime() - y.getTime())
+    return out.filter((d, i) => i === 0 || d.getTime() !== out[i - 1].getTime())
+  }, [key])
 
   const selected = slots.find((s) => toLocalInput(s) === value) ?? slots[0]
   useEffect(() => {
     if (selected && toLocalInput(selected) !== value) onChange(toLocalInput(selected))
   }, [selected, value, onChange])
 
-  if (!selected) return <p className="error">This window has already passed.</p>
+  if (!selected) return <p className="error">{windows.length > 1 ? 'These windows have' : 'This window has'} already passed.</p>
 
   const days: Date[] = []
   slots.forEach((s) => { if (!days.some((d) => sameDay(d, s))) days.push(startOfDay(s)) })
@@ -143,6 +204,19 @@ export function SlotPicker({ min, max, value, onChange }: { min: string | null; 
           {forDay.map((s) => <option key={s.getTime()} value={toLocalInput(s)}>{timeLabel(s)}</option>)}
         </select>
       </label>
+    </div>
+  )
+}
+
+/** Shows one handoff's windows: one line for a single window, a short list for several. */
+export function WindowSummary({ icon, label, list }: { icon: string; label: string; list: TimeWindow[] }) {
+  const sorted = [...list].sort((a, b) => new Date(a.start).getTime() - new Date(b.start).getTime())
+  if (sorted.length === 0) return null
+  if (sorted.length === 1) return <p>{icon} <strong>{label}</strong> {fmtWindow(sorted[0].start, sorted[0].end)}</p>
+  return (
+    <div>
+      <p>{icon} <strong>{label}</strong>, any of these times:</p>
+      <ul className="plain windows">{sorted.map((w) => <li key={w.start}>{fmtWindow(w.start, w.end)}</li>)}</ul>
     </div>
   )
 }

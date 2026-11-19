@@ -49,6 +49,9 @@ export const CATEGORIES = [
 export const catLabel = (c: string) => CATEGORIES.find((x) => x[0] === c)?.[1] ?? c
 export const catIcon = (c: string) => CATEGORIES.find((x) => x[0] === c)?.[2] ?? '📦'
 
+/** One pickup or delivery window. ISO strings from the database, local input strings in forms. */
+export type TimeWindow = { start: string; end: string }
+
 export type FeedItem = {
   id: string
   name: string
@@ -71,6 +74,8 @@ export type FeedCard = {
   delivery_offered: boolean
   delivery_start: string | null
   delivery_end: string | null
+  pickup_windows: TimeWindow[] | null    // windows not yet ended, sorted
+  delivery_windows: TimeWindow[] | null
   org: { id: string; name: string; city: string; type: string }
   distance_miles: number | null
   options: { pickup: boolean; delivery: boolean }
