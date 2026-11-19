@@ -61,6 +61,7 @@ export default function Transportation() {
   const pickups = trips.filter((t) => t.method === 'pickup' && t.claimer.id === me).sort(soonestFirst)
   const incoming = trips.filter((t) => t.method === 'delivery' && t.claimer.id === me).sort(soonestFirst)
   const outgoing = trips.filter((t) => t.method === 'delivery' && t.post.org.id === me).sort(soonestFirst)
+  const pickupsFromMe = trips.filter((t) => t.method === 'pickup' && t.post.org.id === me).sort(soonestFirst)
 
   return (
     <Page title="Transportation" action={back}>
@@ -68,17 +69,19 @@ export default function Transportation() {
       {isPantry && <List title="Pickups I'm doing" list={pickups} kind="pickup" empty="No pickups scheduled." onContact={setContact} />}
       {isPantry && <List title="Deliveries coming to me" list={incoming} kind="incoming" empty="Nothing being delivered to you." onContact={setContact} />}
       <List title="Deliveries I'm making" list={outgoing} kind="outgoing" empty="No deliveries to make." onContact={setContact} />
+      <List title="Pickups from me" list={pickupsFromMe} kind="pickedUp" empty="Nobody is picking up from you." onContact={setContact} />
       {contact && <ContactSheet orgId={contact.id} orgName={contact.name} onClose={() => setContact(null)} />}
     </Page>
   )
 }
 
-type Kind = 'pickup' | 'incoming' | 'outgoing'
+type Kind = 'pickup' | 'incoming' | 'outgoing' | 'pickedUp'
 
 function Card({ t, kind, onContact }: { t: Trip; kind: Kind; onContact: (o: OrgInfo) => void }) {
   // The pantry on the other end, and the address the driver heads to.
-  const other = kind === 'outgoing' ? t.claimer : t.post.org
-  const dest = kind === 'incoming' ? t.claimer : other
+  const other = kind === 'outgoing' || kind === 'pickedUp' ? t.claimer : t.post.org
+  // Where the food changes hands: the poster's place for pickups, the claimer's for deliveries.
+  const dest = t.method === 'pickup' ? t.post.org : t.claimer
   const [label, tone] = CLAIM_STATUS[t.status]
   const late = t.proposed_time && new Date(t.proposed_time).getTime() < t.loadedAt
   return (
@@ -95,6 +98,7 @@ function Card({ t, kind, onContact }: { t: Trip; kind: Kind; onContact: (o: OrgI
         {kind === 'pickup' && <>Pick up from <strong>{other.name}</strong></>}
         {kind === 'incoming' && <><strong>{other.name}</strong> is delivering to you</>}
         {kind === 'outgoing' && <>Deliver to <strong>{other.name}</strong></>}
+        {kind === 'pickedUp' && <><strong>{other.name}</strong> is picking up from you</>}
       </p>
       <p>📍 <a href={mapLink(dest)} target="_blank" rel="noreferrer">{address(dest)}</a></p>
       <Badge source={t.post.source} />

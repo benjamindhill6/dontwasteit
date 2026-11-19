@@ -11,7 +11,7 @@ Live site: https://dontwasteit.pages.dev/
 - Swipe-through offers with distance rules and the Philabundance/SHARE 2-hour window
 - Claims: whole/partial, propose and confirm a time, release, complete, one-tap Text
 - Claim windows ending: other pantries only see a post while a pickup or delivery window they can use is still open. When every window has ended with food left, the post waits in the poster's Activity under "Claim windows ended" with two choices: open a new claim window (back in Offers, alerts go out like a new post, 7-day expiry restarts) or close it out (claims already made stay). See `0005_claim_windows_end.sql`.
-- Transportation: Activity > Transportation (header button) lists open pickups you're doing, deliveries coming to you and deliveries you're making, each soonest first by the agreed claim time, with the address (opens in Maps), the items and a Contact button.
+- Transportation: Activity > Transportation (header button) lists open pickups you're doing, deliveries coming to you, deliveries you're making and pickups other pantries are making from you, each soonest first by the agreed claim time, with the address (opens in Maps), the items and a Contact button.
 - Push alerts: web push with pantry rules plus personal limits (overlap of both), distance rule, provider window release, always-on claim alerts. Profile > Alerts.
 - User Agreement and Privacy Policy: everyone agrees on first use (checkbox), and again whenever a document's `version` changes in `src/legal/documents.ts`. Acceptances are stored per person, per document version, with a server timestamp in `agreements`. Both documents are under Profile.
 - All permissions live in Postgres (RLS + security-definer functions) in `supabase/migrations`
