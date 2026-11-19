@@ -2,9 +2,9 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { supabase } from '../lib/supabase'
-import { CATEGORIES } from '../lib/types'
-import { compressImage, fromLocalInput } from '../lib/format'
-import { WindowPicker, defaultWindow } from '../components/TimePickers'
+import { CATEGORIES, type TimeWindow } from '../lib/types'
+import { compressImage, windowsPayload } from '../lib/format'
+import { WindowSummary, WindowsPicker, defaultWindow, windowsError } from '../components/TimePickers'
 import { Note, Page } from '../components/Common'
 
 type Line = { name: string; category: string; quantity: string; unit: string; best_by: string }
@@ -21,8 +21,8 @@ export default function NewPost() {
   const [files, setFiles] = useState<{ blob: Blob; url: string }[]>([])
   const [pickup, setPickup] = useState(true)
   const [delivery, setDelivery] = useState(false)
-  const [pw, setPw] = useState(defaultWindow)
-  const [dw, setDw] = useState(defaultWindow)
+  const [pw, setPw] = useState<TimeWindow[]>(() => [defaultWindow()])
+  const [dw, setDw] = useState<TimeWindow[]>(() => [defaultWindow()])
   const [source, setSource] = useState<'none' | 'philabundance' | 'share'>('none')
   const [err, setErr] = useState<string | null>(null)
   const [busy, setBusy] = useState(false)
@@ -39,8 +39,8 @@ export default function NewPost() {
     }
     if (s === 2) {
       if (!pickup && !delivery) return 'Offer pickup, delivery, or both.'
-      if (pickup && !(new Date(pw.end) > new Date(pw.start))) return 'Pickup end must be after the start.'
-      if (delivery && !(new Date(dw.end) > new Date(dw.start))) return 'Delivery end must be after the start.'
+      if (pickup && windowsError(pw, 'pickup')) return windowsError(pw, 'pickup')
+      if (delivery && windowsError(dw, 'delivery')) return windowsError(dw, 'delivery')
     }
     return null
   }
@@ -82,8 +82,8 @@ export default function NewPost() {
           require_all: requireAll,
           photos: paths,
           source,
-          pickup: pickup ? { start: fromLocalInput(pw.start), end: fromLocalInput(pw.end) } : undefined,
-          delivery: delivery ? { start: fromLocalInput(dw.start), end: fromLocalInput(dw.end) } : undefined,
+          pickup: pickup ? windowsPayload(pw) : undefined,
+          delivery: delivery ? windowsPayload(dw) : undefined,
         },
       })
       if (error) throw error
@@ -147,11 +147,11 @@ export default function NewPost() {
       {step === 2 && (
         <div className="stack">
           <label className="check big-check"><input type="checkbox" checked={pickup} onChange={(e) => setPickup(e.target.checked)} /> 🚗 Pickup at our location</label>
-          {pickup && <WindowPicker value={pw} onChange={setPw} />}
+          {pickup && <WindowsPicker what="pickup" value={pw} onChange={setPw} />}
           {canDeliver && (
             <label className="check big-check"><input type="checkbox" checked={delivery} onChange={(e) => setDelivery(e.target.checked)} /> 🚚 We can deliver (up to {org.delivery_miles} mi)</label>
           )}
-          {delivery && <WindowPicker value={dw} onChange={setDw} />}
+          {delivery && <WindowsPicker what="delivery" value={dw} onChange={setDw} />}
           {!canDeliver && <p className="note">Add a delivery distance to your profile if you can deliver.</p>}
           <Note />
         </div>
@@ -175,7 +175,8 @@ export default function NewPost() {
             <ul className="plain">{lines.map((l, i) => <li key={i}><strong>{l.quantity} {l.unit}</strong> {l.name}</li>)}</ul>
             {requireAll && <p className="note">Must be taken together.</p>}
             <p>📷 {files.length} photo{files.length === 1 ? '' : 's'}</p>
-            <p>{pickup && '🚗 Pickup '}{delivery && '🚚 Delivery'}</p>
+            {pickup && <WindowSummary icon="🚗" label="Pickup" list={pw} />}
+            {delivery && <WindowSummary icon="🚚" label="Delivery" list={dw} />}
             <p>Source: {source === 'none' ? 'Neither' : source === 'share' ? 'SHARE' : 'Philabundance'}</p>
             <p className="muted">Stays live for 7 days.</p>
           </div>
