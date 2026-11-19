@@ -33,3 +33,13 @@ export function Sheet({ title, onClose, children }: { title: string; onClose: ()
     </div>
   )
 }
+
+/** A collapsible section (Profile, Activity). Starts closed on each visit. */
+export function Section({ title, children }: { title: ReactNode; children: ReactNode }) {
+  return (
+    <details className="section">
+      <summary>{title}</summary>
+      <div className="stack section-body">{children}</div>
+    </details>
+  )
+}

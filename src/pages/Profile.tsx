@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom'
 import { useAuth } from '../auth'
 import { callFn, supabase } from '../lib/supabase'
 import type { Org, Person } from '../lib/types'
-import { Note, Page } from '../components/Common'
+import { Note, Page, Section } from '../components/Common'
 import { PRIVACY, TERMS } from '../legal/documents'
 import { MyAlertsSection, PantryAlertsSection } from './Alerts'
 
@@ -59,16 +59,6 @@ export default function Profile() {
         <Link to={PRIVACY.path}>Privacy Policy</Link>
       </nav>
     </Page>
-  )
-}
-
-/** A collapsible Profile section. Starts closed on each visit. */
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <details className="section">
-      <summary>{title}</summary>
-      <div className="stack section-body">{children}</div>
-    </details>
   )
 }
 

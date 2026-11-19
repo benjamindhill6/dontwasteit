@@ -3,7 +3,7 @@ import { useAuth } from '../auth'
 import { supabase } from '../lib/supabase'
 import type { ClaimStatus, Person, TimeWindow } from '../lib/types'
 import { fmtDateTime, fromLocalInput, num, toLocalInput, windowsFor, windowsPayload } from '../lib/format'
-import { Badge, Page, Sheet } from '../components/Common'
+import { Badge, Page, Section, Sheet } from '../components/Common'
 import { SlotPicker, WindowSummary, WindowsPicker, defaultWindow, windowsError } from '../components/TimePickers'
 
 type ClaimRow = {
@@ -46,6 +46,14 @@ const lastWindowEnd = (p: PostRow) =>
   [p.pickup_offered ? p.pickup_end : null, p.delivery_offered ? p.delivery_end : null]
     .filter((x): x is string => !!x).sort().pop() ?? null
 
+/** History shows claims closed in the last three months. Older ones stay in the database. */
+const HISTORY_MONTHS = 3
+const historyCutoff = () => {
+  const d = new Date()
+  d.setMonth(d.getMonth() - HISTORY_MONTHS)
+  return d.toISOString()
+}
+
 const STATUS: Record<ClaimStatus, [string, string]> = {
   awaiting_time: ['Waiting for a new time', 'warn'],
   time_proposed: ['Time proposed', 'info'],
@@ -65,9 +73,11 @@ export default function Activity() {
   const [err, setErr] = useState<string | null>(null)
 
   const load = useCallback(async () => {
+    const since = historyCutoff()
     const [c, p] = await Promise.all([
       supabase.from('claims')
         .select('id,status,method,proposed_time,claimer_org_id,claimer:organizations!claimer_org_id(name),claim_items(quantity,line_items(name,unit)),post:posts(id,org_id,source,pickup_start,pickup_end,pickup_windows,delivery_start,delivery_end,delivery_windows,org:organizations(name))')
+        .or(`status.in.(awaiting_time,time_proposed,scheduled),completed_at.gte.${since},released_at.gte.${since}`)
         .order('created_at', { ascending: false }),
       supabase.from('posts').select('id,status,source,expires_at,pickup_offered,pickup_end,delivery_offered,delivery_end,line_items(name,quantity,unit,claim_items(quantity,claim:claims(status)))').eq('org_id', org!.id).order('created_at', { ascending: false }).limit(30),
     ])
@@ -128,42 +138,45 @@ export default function Activity() {
 
   return (
     <Page title="My activity">
-      <h2>Open exchanges</h2>
-      {open.length === 0 ? <p className="muted">Nothing open.</p> : open.map((c) => <Card key={c.id} c={c} />)}
+      <Section title={`Open exchanges (${open.length})`}>
+        {open.length === 0 ? <p className="muted">Nothing open.</p> : open.map((c) => <Card key={c.id} c={c} />)}
+      </Section>
 
-      {endedPosts.length > 0 && <>
-        <h2>Claim windows ended</h2>
-        <p className="muted">Other pantries can't see these anymore. Open a new claim window to offer what's left again, or close the post out.</p>
-        {endedPosts.map((p) => (
-          <div className="panel" key={p.id}>
-            <div className="row between"><strong>Food left over</strong><span className="pill warn">Not on offer</span></div>
-            <Badge source={p.source} />
-            <ul className="plain">{p.line_items.filter((l) => remaining(l) > 0).map((l, i) => (
-              <li key={i}>{num(remaining(l))} {l.unit} {l.name}{remaining(l) < l.quantity ? <span className="muted"> (of {num(l.quantity)})</span> : null}</li>
-            ))}</ul>
-            <p className="muted">Last window ended {fmtDateTime(lastWindowEnd(p))}. If you do nothing, it closes on its own {fmtDateTime(p.expires_at)}.</p>
-            <div className="actions">
-              <button className="btn" onClick={() => setRelisting(p)}>New claim window</button>
-              <button className="btn secondary" onClick={() => confirm("Close this post out? What's left won't be offered again. Any claims already made stay as they are.") && act('close_post', { p_post: p.id })}>Close out</button>
+      {endedPosts.length > 0 && (
+        <Section title={`Claim windows ended (${endedPosts.length})`}>
+          <p className="muted">Other pantries can't see these anymore. Open a new claim window to offer what's left again, or close the post out.</p>
+          {endedPosts.map((p) => (
+            <div className="panel" key={p.id}>
+              <div className="row between"><strong>Food left over</strong><span className="pill warn">Not on offer</span></div>
+              <Badge source={p.source} />
+              <ul className="plain">{p.line_items.filter((l) => remaining(l) > 0).map((l, i) => (
+                <li key={i}>{num(remaining(l))} {l.unit} {l.name}{remaining(l) < l.quantity ? <span className="muted"> (of {num(l.quantity)})</span> : null}</li>
+              ))}</ul>
+              <p className="muted">Last window ended {fmtDateTime(lastWindowEnd(p))}. If you do nothing, it closes on its own {fmtDateTime(p.expires_at)}.</p>
+              <div className="actions">
+                <button className="btn" onClick={() => setRelisting(p)}>New claim window</button>
+                <button className="btn secondary" onClick={() => confirm("Close this post out? What's left won't be offered again. Any claims already made stay as they are.") && act('close_post', { p_post: p.id })}>Close out</button>
+              </div>
             </div>
+          ))}
+        </Section>
+      )}
+
+      <Section title={`My live posts (${livePosts.length})`}>
+        {livePosts.length === 0 ? <p className="muted">No live posts.</p> : livePosts.map((p) => (
+          <div className="panel" key={p.id}>
+            <Badge source={p.source} />
+            <ul className="plain">{p.line_items.map((l, i) => <li key={i}>{num(l.quantity)} {l.unit} {l.name}</li>)}</ul>
+            <p className="muted">Expires {fmtDateTime(p.expires_at)}</p>
+            <button className="btn danger" onClick={() => confirm('Cancel this post? Anyone with a claim will be released.') && act('cancel_post', { p_post: p.id })}>Cancel post</button>
           </div>
         ))}
-      </>}
+      </Section>
 
-      <h2>My live posts</h2>
-      {livePosts.length === 0 ? <p className="muted">No live posts.</p> : livePosts.map((p) => (
-        <div className="panel" key={p.id}>
-          <Badge source={p.source} />
-          <ul className="plain">{p.line_items.map((l, i) => <li key={i}>{num(l.quantity)} {l.unit} {l.name}</li>)}</ul>
-          <p className="muted">Expires {fmtDateTime(p.expires_at)}</p>
-          <button className="btn danger" onClick={() => confirm('Cancel this post? Anyone with a claim will be released.') && act('cancel_post', { p_post: p.id })}>Cancel post</button>
-        </div>
-      ))}
-
-      {closed.length > 0 && <>
-        <h2>History</h2>
-        {closed.slice(0, 10).map((c) => <Card key={c.id} c={c} />)}
-      </>}
+      <Section title="History">
+        {closed.length === 0 ? <p className="muted">Nothing closed out in the last three months.</p> : closed.map((c) => <Card key={c.id} c={c} />)}
+        <p className="muted">History goes back three months. Need something older? Email Ben at <a href="mailto:benjamindhill6@gmail.com">benjamindhill6@gmail.com</a> and he'll pull it for you.</p>
+      </Section>
 
       {relisting && (
         <RelistSheet post={relisting} onClose={() => setRelisting(null)} onDone={() => { setRelisting(null); load() }} />
