@@ -34,6 +34,7 @@ label.check input { width: 28px; height: 28px; min-height: 0; flex: none; }
 .btn.secondary { background: transparent; color: var(--green); }
 .btn.danger { background: transparent; border-color: var(--danger); color: var(--danger); }
 .btn.link { background: none; border: none; color: var(--green); min-height: 44px; padding: 0 8px; text-decoration: underline; }
+.btn.head-link { min-height: 44px; padding: 0 14px; font-size: .95rem; white-space: nowrap; flex-shrink: 0; }
 .btn.big { min-height: 68px; font-size: 1.3rem; width: 100%; }
 .btn:disabled { opacity: .5; }
 .filebtn { cursor: pointer; }

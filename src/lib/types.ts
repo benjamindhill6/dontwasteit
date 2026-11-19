@@ -84,3 +84,12 @@ export type FeedCard = {
 }
 
 export type ClaimStatus = 'awaiting_time' | 'time_proposed' | 'scheduled' | 'completed' | 'released'
+
+/** Label and pill tone for each claim status. */
+export const CLAIM_STATUS: Record<ClaimStatus, [string, string]> = {
+  awaiting_time: ['Waiting for a new time', 'warn'],
+  time_proposed: ['Time proposed', 'info'],
+  scheduled: ['Time confirmed', 'good'],
+  completed: ['Complete', 'done'],
+  released: ['Released', 'done'],
+}

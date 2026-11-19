@@ -8,6 +8,7 @@ import Offers from './pages/Offers'
 import NewPost from './pages/NewPost'
 import Activity from './pages/Activity'
 import Profile from './pages/Profile'
+import Transportation from './pages/Transportation'
 import Admin from './pages/Admin'
 import Alerts, { MyAlertLimits, PantryAlertRules } from './pages/Alerts'
 import { syncPush } from './lib/push'
@@ -94,6 +95,7 @@ export default function App() {
           {isPantry && <Route path="/offers" element={<Offers />} />}
           {canPost && <Route path="/post" element={<NewPost />} />}
           {canPost && <Route path="/activity" element={<Activity />} />}
+          {canPost && <Route path="/activity/transportation" element={<Transportation />} />}
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/alerts" element={<Alerts />} />
           <Route path={TERMS.path} element={<LegalPage doc={TERMS} />} />
