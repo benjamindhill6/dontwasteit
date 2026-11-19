@@ -9,6 +9,7 @@ import NewPost from './pages/NewPost'
 import Activity from './pages/Activity'
 import Profile from './pages/Profile'
 import Transportation from './pages/Transportation'
+import TransportCalendar from './pages/TransportCalendar'
 import Admin from './pages/Admin'
 import Alerts, { MyAlertLimits, PantryAlertRules } from './pages/Alerts'
 import { syncPush } from './lib/push'
@@ -96,6 +97,7 @@ export default function App() {
           {canPost && <Route path="/post" element={<NewPost />} />}
           {canPost && <Route path="/activity" element={<Activity />} />}
           {canPost && <Route path="/activity/transportation" element={<Transportation />} />}
+          {canPost && <Route path="/activity/transportation/calendar" element={<TransportCalendar />} />}
           <Route path="/profile" element={<Profile />} />
           <Route path="/profile/alerts" element={<Alerts />} />
           <Route path={TERMS.path} element={<LegalPage doc={TERMS} />} />
