@@ -77,13 +77,15 @@ export default function Offers() {
             </li>
           ))}
         </ul>
-        {c.require_all && <p className="note">Must be taken all together.</p>}
+        <div className="claim-row">
+          <p className="note">{c.require_all ? 'Must be taken all together.' : 'Take some or all of it.'}</p>
+          <button className="btn" onClick={() => setClaiming(c)}>Claim</button>
+        </div>
         <div className="options">
           {c.options.pickup && <WindowSummary icon="🚗" label="Pickup" list={windowsFor(c, 'pickup', true)} />}
           {c.options.delivery && <WindowSummary icon="🚚" label="Delivery" list={windowsFor(c, 'delivery', true)} />}
           <Note />
         </div>
-        <button className="btn big" onClick={() => setClaiming(c)}>Claim</button>
         <div className="pager">
           <button className="btn secondary" onClick={() => go(-1)} aria-label="Previous offer">‹ Prev</button>
           <button className="btn secondary" onClick={() => go(1)} aria-label="Next offer">Next ›</button>
