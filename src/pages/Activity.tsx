@@ -188,12 +188,13 @@ function ProposeSheet({ claim, onClose, onDone }: { claim: ClaimRow; onClose: ()
     else onDone()
   }
   return (
-    <Sheet title="Propose a time" onClose={onClose}>
+    <Sheet title="Propose a time" onClose={onClose} footer={<>
+      {err && <p className="error">{err}</p>}
+      <button className="btn big" onClick={go}>Send</button>
+    </>}>
       <div className="stack">
         <div className="muted"><WindowSummary icon={claim.method === 'pickup' ? '🚗' : '🚚'} label={claim.method === 'pickup' ? 'Pickup' : 'Delivery'} list={windows} /></div>
         <SlotPicker windows={windows} value={t} onChange={setT} />
-        {err && <p className="error">{err}</p>}
-        <button className="btn big" onClick={go}>Send</button>
       </div>
     </Sheet>
   )
@@ -228,7 +229,10 @@ function RelistSheet({ post, onClose, onDone }: { post: PostRow; onClose: () => 
   }
 
   return (
-    <Sheet title="New claim windows" onClose={onClose}>
+    <Sheet title="New claim windows" onClose={onClose} footer={<>
+      {err && <p className="error" role="alert">{err}</p>}
+      <button className="btn big" disabled={busy} onClick={go}>{busy ? 'Saving…' : 'Offer it again'}</button>
+    </>}>
       <div className="stack">
         <p>What's left goes back in Offers for other pantries, and they get an alert the same way they do for a new post.</p>
         <label className="check big-check"><input type="checkbox" checked={pickup} onChange={(e) => setPickup(e.target.checked)} /> 🚗 Pickup at our location</label>
@@ -238,8 +242,6 @@ function RelistSheet({ post, onClose, onDone }: { post: PostRow; onClose: () => 
         )}
         {delivery && <WindowsPicker what="delivery" value={dw} onChange={setDw} />}
         <p className="muted">Stays live for 7 more days.</p>
-        {err && <p className="error" role="alert">{err}</p>}
-        <button className="btn big" disabled={busy} onClick={go}>{busy ? 'Saving…' : 'Offer it again'}</button>
       </div>
     </Sheet>
   )

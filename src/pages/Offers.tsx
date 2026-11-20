@@ -170,7 +170,10 @@ function ClaimSheet({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set
   }
 
   return (
-    <Sheet title="Claim this food" onClose={onClose}>
+    <Sheet title="Claim this food" onClose={onClose} footer={<>
+      {err && <p className="error" role="alert">{err}</p>}
+      <button className="btn big" disabled={busy} onClick={submit}>Send claim</button>
+    </>}>
       <div className="stack">
         {open.map((it) => (
           <div key={it.id} className="claim-line">
@@ -195,8 +198,6 @@ function ClaimSheet({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set
         <p className="lbl">Propose a time</p>
         <SlotPicker windows={windows} value={time} onChange={setTime} />
         <p className="note">The poster confirms your time. You'll find it under Activity.</p>
-        {err && <p className="error" role="alert">{err}</p>}
-        <button className="btn big" disabled={busy} onClick={submit}>Send claim</button>
       </div>
     </Sheet>
   )
