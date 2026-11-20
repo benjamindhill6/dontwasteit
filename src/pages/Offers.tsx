@@ -1,14 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { supabase, photoUrl } from '../lib/supabase'
-import { catIcon, catLabel, type FeedCard } from '../lib/types'
+import { CATEGORIES, catIcon, catLabel, type FeedCard } from '../lib/types'
 import { fmtDate, fromLocalInput, num, toLocalInput, windowsFor } from '../lib/format'
 import { Badge, Note, Page, Sheet } from '../components/Common'
 import { SlotPicker, WindowSummary } from '../components/TimePickers'
 
+const ALL_CATS = CATEGORIES.map((x) => x[0] as string)
+const openItems = (c: FeedCard) => c.items.filter((x) => x.remaining > 0)
+
 export default function Offers() {
   const [cards, setCards] = useState<FeedCard[] | null>(null)
+  // Position 0 is the category filter; offers start at 1.
   const [i, setI] = useState(0)
+  const [cats, setCats] = useState<Set<string>>(() => new Set(ALL_CATS))
   const [claiming, setClaiming] = useState<FeedCard | null>(null)
   const [openItem, setOpenItem] = useState<string | null>(null)
   const startX = useRef<number | null>(null)
@@ -21,7 +26,7 @@ export default function Offers() {
     const list = data as FeedCard[]
     if (wanted) {
       const at = list.findIndex((x) => x.id === wanted)
-      if (at >= 0) setI(at)
+      if (at >= 0) { setCats(new Set(ALL_CATS)); setI(at + 1) }
       setParams({}, { replace: true })
     }
     setCards(list)
@@ -40,29 +45,69 @@ export default function Offers() {
       </Page>
     )
   }
-  const idx = Math.min(i, cards.length - 1)
-  const c = cards[idx]
-  const go = (d: number) => { setI((idx + d + cards.length) % cards.length); setOpenItem(null) }
+
+  // An offer shows when any of its open items is in a checked category.
+  const shown = cards.filter((c) => openItems(c).some((x) => cats.has(x.category)))
+  const total = shown.length + 1
+  const idx = Math.min(i, total - 1)
+  const go = (d: number) => { setI((idx + d + total) % total); setOpenItem(null) }
+  const toggle = (k: string) => {
+    const next = new Set(cats)
+    if (next.has(k)) next.delete(k); else next.add(k)
+    setCats(next)
+  }
+  const swipe = {
+    onTouchStart: (e: React.TouchEvent) => { startX.current = e.touches[0].clientX },
+    onTouchEnd: (e: React.TouchEvent) => {
+      if (startX.current == null) return
+      const dx = e.changedTouches[0].clientX - startX.current
+      startX.current = null
+      if (Math.abs(dx) > 60) go(dx < 0 ? 1 : -1)
+    },
+  }
+
+  if (idx === 0) {
+    const count = (k: string) => cards.filter((c) => openItems(c).some((x) => x.category === k)).length
+    return (
+      <Page title="Offers" action={<span className="muted">{shown.length} of {cards.length} offers</span>}>
+        <article className="card" {...swipe}>
+          <h2>What are you looking for?</h2>
+          <div className="cat-filter">
+            {CATEGORIES.map(([k, label, icon]) => (
+              <label key={k} className="check cat-option">
+                <input type="checkbox" checked={cats.has(k)} onChange={() => toggle(k)} />
+                <span className="cat-name">{icon} {label}</span>
+                <span className="muted">{count(k)}</span>
+              </label>
+            ))}
+          </div>
+          <div className="row between">
+            <button className="btn link" onClick={() => setCats(new Set(ALL_CATS))}>Check all</button>
+            <button className="btn link" onClick={() => setCats(new Set())}>Uncheck all</button>
+          </div>
+          {shown.length === 0
+            ? <p className="note">No offers in the checked categories right now.</p>
+            : <button className="btn" onClick={() => go(1)}>See {shown.length} {shown.length === 1 ? 'offer' : 'offers'} ›</button>}
+        </article>
+      </Page>
+    )
+  }
+
+  const c = shown[idx - 1]
+  // Items in unchecked categories are hidden, unless the offer must be taken all together.
+  const items = openItems(c).filter((x) => c.require_all || cats.has(x.category))
+  const lead = items[0] ?? openItems(c)[0]
 
   return (
-    <Page title="Offers" action={<span className="muted">{idx + 1} of {cards.length}</span>}>
-      <article
-        className="card"
-        onTouchStart={(e) => { startX.current = e.touches[0].clientX }}
-        onTouchEnd={(e) => {
-          if (startX.current == null) return
-          const dx = e.changedTouches[0].clientX - startX.current
-          startX.current = null
-          if (Math.abs(dx) > 60) go(dx < 0 ? 1 : -1)
-        }}
-      >
+    <Page title="Offers" action={<span className="muted">{idx} of {shown.length}</span>}>
+      <article className="card" {...swipe}>
         <div className="photo">
-          {c.photos.length ? <img src={photoUrl(c.photos[0])} alt={c.items.map((x) => x.name).join(', ')} /> : <span className="photo-fallback">{catIcon(c.items[0]?.category)}</span>}
+          {c.photos.length ? <img src={photoUrl(c.photos[0])} alt={c.items.map((x) => x.name).join(', ')} /> : <span className="photo-fallback">{catIcon(lead?.category)}</span>}
           <Badge source={c.source} />
         </div>
         <h2>{c.org.name} <span className="muted">· {c.org.city}{c.distance_miles != null ? ` · ${c.distance_miles} mi` : ''}</span></h2>
         <ul className="items">
-          {c.items.filter((x) => x.remaining > 0).map((it) => (
+          {items.map((it) => (
             <li key={it.id}>
               <button className="item-row" aria-expanded={openItem === it.id} onClick={() => setOpenItem(openItem === it.id ? null : it.id)}>
                 <span>{catIcon(it.category)} {it.name}</span>
@@ -77,6 +122,9 @@ export default function Offers() {
             </li>
           ))}
         </ul>
+        {items.length < openItems(c).length && (
+          <p className="note">{openItems(c).length - items.length} more {openItems(c).length - items.length === 1 ? 'item' : 'items'} in unchecked categories.</p>
+        )}
         <div className="claim-row">
           <p className="note">{c.require_all ? 'Must be taken all together.' : 'Take some or all of it.'}</p>
           <button className="btn" onClick={() => setClaiming(c)}>Claim</button>
@@ -87,20 +135,20 @@ export default function Offers() {
           <Note />
         </div>
         <div className="pager">
-          <button className="btn secondary" onClick={() => go(-1)} aria-label="Previous offer">‹ Prev</button>
-          <button className="btn secondary" onClick={() => go(1)} aria-label="Next offer">Next ›</button>
+          <button className="btn secondary" onClick={() => go(-1)} aria-label={idx === 1 ? 'Back to filter' : 'Previous offer'}>{idx === 1 ? '‹ Filter' : '‹ Prev'}</button>
+          <button className="btn secondary" onClick={() => go(1)} aria-label={idx === shown.length ? 'Back to filter' : 'Next offer'}>{idx === shown.length ? 'Filter ›' : 'Next ›'}</button>
         </div>
       </article>
-      {claiming && <ClaimSheet card={claiming} onClose={() => setClaiming(null)} onDone={() => { setClaiming(null); load() }} />}
+      {claiming && <ClaimSheet card={claiming} cats={cats} onClose={() => setClaiming(null)} onDone={() => { setClaiming(null); load() }} />}
     </Page>
   )
 }
 
-function ClaimSheet({ card, onClose, onDone }: { card: FeedCard; onClose: () => void; onDone: () => void }) {
+function ClaimSheet({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set<string>; onClose: () => void; onDone: () => void }) {
   const open = card.items.filter((x) => x.remaining > 0)
   const splittable = (it: (typeof open)[number]) => !card.require_all && it.quantity > 1
   const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(open.map((x) => [x.id, String(x.remaining)])))
-  const [on, setOn] = useState<Record<string, boolean>>(() => Object.fromEntries(open.map((x) => [x.id, true])))
+  const [on, setOn] = useState<Record<string, boolean>>(() => Object.fromEntries(open.map((x) => [x.id, cats.has(x.category)])))
   const [method, setMethod] = useState<'pickup' | 'delivery'>(card.options.pickup ? 'pickup' : 'delivery')
   const windows = windowsFor(card, method, true)
   const [time, setTime] = useState(() => toLocalInput(new Date(windows[0]?.start ?? Date.now())))
