@@ -90,6 +90,9 @@ label.check input { width: 28px; height: 28px; min-height: 0; flex: none; }
 @media (max-height: 700px) { .sheet-foot .btn.big { min-height: 52px; font-size: 1.1rem; } }
 .claim-line { display: flex; flex-direction: column; gap: 6px; padding-bottom: 10px; border-bottom: 1px solid var(--line); }
 .lbl { font-weight: 600; font-size: .95rem; margin: 0; }
+.claim-from { margin: 0; }
+.disclaimer { margin: 0; padding: 10px 12px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); font-size: .9rem; }
+@media (max-height: 700px) { .claim-page .btn.big { min-height: 56px; font-size: 1.15rem; } }
 .chips { display: flex; flex-wrap: wrap; gap: 8px; }
 .chip { font: inherit; font-size: .95rem; font-weight: 600; min-height: 44px; padding: 8px 14px; border-radius: 999px; border: 2px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
 .chip.on { border-color: var(--green); background: color-mix(in srgb, var(--green) 16%, var(--surface)); }
