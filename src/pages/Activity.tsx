@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useAuth } from '../auth'
 import { supabase } from '../lib/supabase'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { CLAIM_STATUS, type ClaimStatus, type TimeWindow } from '../lib/types'
 import { fmtDateTime, fromLocalInput, num, toLocalInput, windowsFor, windowsPayload } from '../lib/format'
 import { Badge, Page, Section, Sheet } from '../components/Common'
@@ -65,6 +65,8 @@ export default function Activity() {
   const [relisting, setRelisting] = useState<PostRow | null>(null)
   const [now, setNow] = useState(0)   // when the list was loaded
   const [err, setErr] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
+  const [params, setParams] = useSearchParams()
 
   const load = useCallback(async () => {
     const since = historyCutoff()
@@ -80,6 +82,17 @@ export default function Activity() {
     setNow(Date.now())
   }, [org])
   useEffect(() => { load() }, [load])
+
+  // A "declined your time" alert links to /activity?propose=<claim id>: open the sheet for it.
+  const proposeId = params.get('propose')
+  useEffect(() => {
+    if (!proposeId || !claims) return
+    const c = claims.find((x) => x.id === proposeId)
+    if (c && c.claimer_org_id === org!.id && (c.status === 'awaiting_time' || c.status === 'time_proposed')) setProposing(c)
+    else if (c?.status === 'scheduled') setNotice('That exchange already has a time set.')
+    else setNotice('That exchange is no longer open.')
+    setParams((p) => { p.delete('propose'); return p }, { replace: true })
+  }, [proposeId, claims, org, setParams])
 
   async function act(fn: string, args: Record<string, unknown>) {
     setErr(null)
@@ -127,6 +140,7 @@ export default function Activity() {
 
   return (
     <Page title="My activity" action={<Link className="btn secondary head-link" to="/activity/transportation">🚚 Transportation</Link>}>
+      {notice && <p className="muted">{notice}</p>}
       <Section title={`Open exchanges (${open.length})`}>
         {open.length === 0 ? <p className="muted">Nothing open.</p> : open.map((c) => <Card key={c.id} c={c} />)}
       </Section>
