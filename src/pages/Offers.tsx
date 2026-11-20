@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useLocation, useNavigate, useSearchParams } from 'react-router-dom'
 import { supabase, photoUrl } from '../lib/supabase'
 import { CATEGORIES, catIcon, catLabel, type FeedCard } from '../lib/types'
 import { fmtDate, fromLocalInput, num, toLocalInput, windowsFor } from '../lib/format'
-import { Badge, Note, Page, Sheet } from '../components/Common'
+import { Badge, Note, Page } from '../components/Common'
 import { SlotPicker, WindowSummary } from '../components/TimePickers'
 
 const ALL_CATS = CATEGORIES.map((x) => x[0] as string)
@@ -14,11 +14,17 @@ export default function Offers() {
   // Position 0 is the category filter; offers start at 1.
   const [i, setI] = useState(0)
   const [cats, setCats] = useState<Set<string>>(() => new Set(ALL_CATS))
-  const [claiming, setClaiming] = useState<FeedCard | null>(null)
   const [openItem, setOpenItem] = useState<string | null>(null)
   const startX = useRef<number | null>(null)
   const [params, setParams] = useSearchParams()
   const wanted = params.get('post')   // set when someone taps a new-food alert
+  // The claim page is its own history entry (?claim=<post id>), so the phone's Back button closes it.
+  const claimId = params.get('claim')
+  const nav = useNavigate()
+  const location = useLocation()
+  const openClaim = (id: string) => setParams({ claim: id })
+  const closeClaim = () => { if (location.key !== 'default') nav(-1); else setParams({}, { replace: true }) }
+  useEffect(() => { document.querySelector('.main')?.scrollTo(0, 0) }, [claimId])
 
   const load = useCallback(async () => {
     const { data, error } = await supabase.rpc('browse_feed')
@@ -34,6 +40,8 @@ export default function Offers() {
   useEffect(() => { load() }, [load])
 
   if (!cards) return <Page title="Offers"><p>Loading…</p></Page>
+  const claiming = claimId ? cards.find((x) => x.id === claimId) : undefined
+  if (claiming) return <ClaimPage card={claiming} cats={cats} onClose={closeClaim} onDone={() => { closeClaim(); load() }} />
   if (cards.length === 0) {
     return (
       <Page title="Offers">
@@ -127,7 +135,7 @@ export default function Offers() {
         )}
         <div className="claim-row">
           <p className="note">{c.require_all ? 'Must be taken all together.' : 'Take some or all of it.'}</p>
-          <button className="btn" onClick={() => setClaiming(c)}>Claim</button>
+          <button className="btn" onClick={() => openClaim(c.id)}>Claim</button>
         </div>
         <div className="options">
           {c.options.pickup && <WindowSummary icon="🚗" label="Pickup" list={windowsFor(c, 'pickup', true)} />}
@@ -139,12 +147,12 @@ export default function Offers() {
           <button className="btn secondary" onClick={() => go(1)} aria-label={idx === shown.length ? 'Back to filter' : 'Next offer'}>{idx === shown.length ? 'Filter ›' : 'Next ›'}</button>
         </div>
       </article>
-      {claiming && <ClaimSheet card={claiming} cats={cats} onClose={() => setClaiming(null)} onDone={() => { setClaiming(null); load() }} />}
     </Page>
   )
 }
 
-function ClaimSheet({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set<string>; onClose: () => void; onDone: () => void }) {
+/** Claiming is a full page instead of a pop-up, so short phones get the whole screen and the page just scrolls. */
+function ClaimPage({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set<string>; onClose: () => void; onDone: () => void }) {
   const open = card.items.filter((x) => x.remaining > 0)
   const splittable = (it: (typeof open)[number]) => !card.require_all && it.quantity > 1
   const [qty, setQty] = useState<Record<string, string>>(() => Object.fromEntries(open.map((x) => [x.id, String(x.remaining)])))
@@ -170,11 +178,9 @@ function ClaimSheet({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set
   }
 
   return (
-    <Sheet title="Claim this food" onClose={onClose} footer={<>
-      {err && <p className="error" role="alert">{err}</p>}
-      <button className="btn big" disabled={busy} onClick={submit}>Send claim</button>
-    </>}>
-      <div className="stack">
+    <Page title="Claim this food" action={<button className="btn link" onClick={onClose}>‹ Back</button>}>
+      <div className="stack claim-page">
+        <p className="muted claim-from">From <strong>{card.org.name}</strong> · {card.org.city}{card.distance_miles != null ? ` · ${card.distance_miles} mi` : ''}</p>
         {open.map((it) => (
           <div key={it.id} className="claim-line">
             {!card.require_all && (
@@ -198,7 +204,11 @@ function ClaimSheet({ card, cats, onClose, onDone }: { card: FeedCard; cats: Set
         <p className="lbl">Propose a time</p>
         <SlotPicker windows={windows} value={time} onChange={setTime} />
         <p className="note">The poster confirms your time. You'll find it under Activity.</p>
+        <p className="disclaimer" role="note">⚠️ Don't Waste It! does not check the condition of any food. The receiving pantry is responsible for inspecting it before accepting it.</p>
+        {err && <p className="error" role="alert">{err}</p>}
+        <button className="btn big" disabled={busy} onClick={submit}>{busy ? 'Sending…' : 'Send claim'}</button>
+        <button className="btn secondary" onClick={onClose}>Cancel</button>
       </div>
-    </Sheet>
+    </Page>
   )
 }
