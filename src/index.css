@@ -64,6 +64,9 @@ label.check input { width: 28px; height: 28px; min-height: 0; flex: none; }
 .item-detail { padding: 6px 4px 10px; color: var(--muted); }
 .options p { margin: 4px 0; }
 .plain.windows li { padding-left: 1.6em; margin: 2px 0; }
+.cat-filter { display: flex; flex-direction: column; border-top: 1px solid var(--line); }
+.cat-option { padding: 10px 4px; min-height: 52px; border-bottom: 1px solid var(--line); cursor: pointer; }
+.cat-option .cat-name { flex: 1; }
 .pager { display: flex; gap: 10px; } .pager .btn { flex: 1; }
 .empty { text-align: center; padding: 40px 0; display: flex; flex-direction: column; gap: 12px; align-items: center; }
 .seg { display: flex; gap: 8px; } .seg.vertical { flex-direction: column; }
