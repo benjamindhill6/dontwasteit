@@ -2,7 +2,7 @@
 
 Invite-only web app where food pantries share surplus food. React + TypeScript (Vite, installable PWA) on Supabase, hosted on Cloudflare Pages. See the Phase 1 spec for the full product.
 
-Live site: https://dontwasteit.pages.dev/
+Live site: https://dontwasteit.net (the domain is on Cloudflare; the old https://dontwasteit.pages.dev still works and shows a "We moved" banner, see `src/components/MovedBanner.tsx`).
 
 ## What's built (build steps 1-4)
 
@@ -20,7 +20,7 @@ Not yet: needs posts, serving schedules and calendar, admin reports, post editin
 
 ## One-time setup (production only, no local database)
 
-1. **Supabase**: create a project. Auth > Providers > Email: turn **off** "Allow new users to sign up". Auth > URL Configuration: set Site URL to the deployed address.
+1. **Supabase**: create a project. Auth > Providers > Email: turn **off** "Allow new users to sign up". Auth > URL Configuration: set Site URL to `https://dontwasteit.net` and add `https://dontwasteit.net/**` to Redirect URLs (keep `https://dontwasteit.pages.dev/**` there while anyone still uses the old address). Sign-in links and invites go to whatever address the person is using, and only addresses on that list are allowed.
 2. **Database**: `npx supabase login`, `npx supabase link --project-ref <ref>`, `npx supabase db push` (applies `supabase/migrations`).
 3. **Edge functions**: `npx supabase functions deploy save-organization manage-person` and `npx supabase functions deploy send-alerts --no-verify-jwt`.
 3a. **Push alerts** (once):
@@ -28,7 +28,7 @@ Not yet: needs posts, serving schedules and calendar, admin reports, post editin
    - `npx supabase secrets set VAPID_PUBLIC_KEY=... VAPID_PRIVATE_KEY=... VAPID_SUBJECT=mailto:you@example.com ALERTS_SECRET=...`
    - In the Supabase SQL editor: `select vault.create_secret('https://<ref>.supabase.co', 'project_url'); select vault.create_secret('<same ALERTS_SECRET>', 'alerts_secret');`
    - Without these, alerts queue up in the `alerts` table and nothing is sent.
-4. **Cloudflare Pages**: connect this GitHub repo. Build command `npm run build`, output `dist`. Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (Supabase > Project Settings > API).
+4. **Cloudflare Pages**: connect this GitHub repo. Build command `npm run build`, output `dist`. Environment variables: `VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY` (Supabase > Project Settings > API). Custom domains: `dontwasteit.net` and `www.dontwasteit.net`, with a Cloudflare Redirect Rule sending www to the bare domain.
 5. **First admin**: in Supabase Auth > Users, invite benjamindhill6@gmail.com. A database trigger makes that account the platform admin automatically. Then add the first pantry in the app's Admin tab and invite ridleyparkfoodpantry@gmail.com as its contact.
 
 Deploys: every push to `main` redeploys the site. Installed copies pick up a new deploy on their own: the app checks for a new version when it opens, when it comes back to the foreground, and every 30 minutes. If nobody has touched the app yet it reloads by itself, otherwise it shows an "Update available" banner. See `src/lib/appUpdate.ts` and `public/_headers`. Migrations and functions are applied with the Supabase CLI above.
